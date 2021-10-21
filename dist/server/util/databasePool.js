@@ -1,6 +1,6 @@
 "use strict";
 exports.__esModule = true;
-var pg_1 = require("pg");
+var pg = require("pg");
 var dotenv = require("dotenv");
 dotenv.config();
 /**
@@ -14,5 +14,5 @@ var connectionConfiguration = {
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT
 };
-var dbPool = new pg_1["default"](connectionConfiguration);
+var dbPool = new pg.Pool(connectionConfiguration);
 exports["default"] = dbPool;

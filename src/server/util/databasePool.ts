@@ -1,4 +1,4 @@
-import Pool from "pg";
+import * as pg from "pg";
 import * as dotenv from "dotenv";
 import { IConnectionConfig } from "../../ts/interfaces/databasePool";
 dotenv.config();
@@ -16,6 +16,6 @@ const connectionConfiguration: IConnectionConfig = {
     port: process.env.DB_PORT
 }
 
-const dbPool: Pool = new Pool(connectionConfiguration);
+const dbPool: pg.Pool = new pg.Pool(connectionConfiguration);
 
 export default dbPool;
