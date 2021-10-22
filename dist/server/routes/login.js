@@ -6,7 +6,7 @@ var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
 var dotenv = require("dotenv");
 dotenv.config();
-var router = express();
+var router = express.Router();
 router.use(express.json());
 function loginRoute() {
     router.post("/", function (req, res) {

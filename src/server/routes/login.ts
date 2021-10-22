@@ -6,7 +6,7 @@ import * as jwt from "jsonwebtoken";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const router: express.Router = express();
+const router: express.Router = express.Router();
 
 router.use(express.json());
 
