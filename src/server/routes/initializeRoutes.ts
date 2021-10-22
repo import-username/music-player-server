@@ -1,5 +1,6 @@
 import * as express from "express";
 import signupRoute from "./signup";
+import loginRoute from "./login";
 
 /**
  * Adds route objects to application middleware.
@@ -7,4 +8,5 @@ import signupRoute from "./signup";
  */
 export default function initializeRoutes(app: express.Express): void {
     app.use("/signup", signupRoute());
+    app.use("/login", loginRoute());
 }
