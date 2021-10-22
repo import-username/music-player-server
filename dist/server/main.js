@@ -2,8 +2,10 @@
 exports.__esModule = true;
 var express = require("express");
 var initializeRoutes_1 = require("./routes/initializeRoutes");
+var cookieParser = require("cookie-parser");
 var PORT = parseInt(process.env.PORT) || 5000;
 var app = express();
+app.use(cookieParser());
 (0, initializeRoutes_1["default"])(app);
 app.get("/", function (req, res) {
     return res.status(200).json({

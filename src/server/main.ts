@@ -1,8 +1,11 @@
 import * as express from "express";
 import initializeRoutes from "./routes/initializeRoutes";
+import * as cookieParser from "cookie-parser";
 
 const PORT: number = parseInt(process.env.PORT) || 5000;
 const app: express.Express = express();
+
+app.use(cookieParser());
 
 initializeRoutes(app);
 
