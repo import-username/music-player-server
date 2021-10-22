@@ -9,7 +9,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 exports.__esModule = true;
-exports.findByEmail = exports.findById = void 0;
+exports.save = exports.findByEmail = exports.findById = void 0;
 var databasePool_1 = require("../util/databasePool");
 /**
  * Queries postgresql database users table for a single row with id.
@@ -41,3 +41,19 @@ function findByEmail(email, callback) {
     });
 }
 exports.findByEmail = findByEmail;
+/**
+ * Inserts a new user row into users table.
+ * @param email Email value to add to row.
+ * @param password Password value to add to row.
+ * @param callback
+ */
+function save(email, password, callback) {
+    var queryText = "INSERT INTO users VALUES($1, $2);";
+    databasePool_1["default"].query(queryText, [email, password], function (err, queryResult) {
+        if (err) {
+            return callback(err, null);
+        }
+        return callback(null, "Success");
+    });
+}
+exports.save = save;

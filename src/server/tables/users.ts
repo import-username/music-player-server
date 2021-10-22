@@ -1,5 +1,5 @@
 import { QueryResult } from "pg";
-import { UsersQueryCallback } from "../../ts/types/users";
+import { UsersInsertCallback, UsersQueryCallback } from "../../ts/types/users";
 import dbPool from "../util/databasePool";
 
 /**
@@ -25,7 +25,7 @@ export function findById(id: string, callback: UsersQueryCallback): void {
  * @param callback 
  */
 export function findByEmail(email: string, callback: UsersQueryCallback): void {
-    const queryText: string = "SELECT * FROM users WHERE email=$1;"
+    const queryText: string = "SELECT * FROM users WHERE email=$1;";
 
     dbPool.query(queryText, [email], (err: Error, queryResult: QueryResult) => {
         if (err) {
@@ -33,5 +33,23 @@ export function findByEmail(email: string, callback: UsersQueryCallback): void {
         }
 
         return callback(null, [...queryResult.rows][0]);
+    });
+}
+
+/**
+ * Inserts a new user row into users table.
+ * @param email Email value to add to row.
+ * @param password Password value to add to row.
+ * @param callback 
+ */
+export function save(email: string, password: string, callback: UsersInsertCallback): void {
+    const queryText: string = "INSERT INTO users VALUES($1, $2);";
+
+    dbPool.query(queryText, [email, password], (err: Error, queryResult: QueryResult) => {
+        if (err) {
+            return callback(err, null);
+        }
+
+        return callback(null, "Success");
     });
 }
