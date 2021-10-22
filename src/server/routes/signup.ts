@@ -1,6 +1,10 @@
 import * as express from "express";
+import { IUserQuery } from "../../ts/interfaces/users";
+import * as Users from "../tables/users";
 
 const router: express.Router = express.Router();
+
+router.use(express.json());
 
 /**
  * Initializes endpoints for /signup route.
@@ -10,8 +14,31 @@ export default function signupRoute(): express.Router {
     /**
      * Endpoint for accepting and verifying requests to create a new user account.
      */
-    router.post("/", (req: express.Request, res: express.Response): express.Response => {
-        return res.sendStatus(200);
+    router.post("/", (req: express.Request, res: express.Response): void | express.Response => {
+        if (!(req.body.email) || !(req.body.password)) {
+            return res.status(401).json({
+                message: "Invalid email or password."
+            });
+        }
+
+        Users.findByEmail(req.body.email, (err: Error, user: IUserQuery) => {
+            if (err) {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            }
+
+            if (user) {
+                return res.status(401).json({
+                    message: "User with that email already exists."
+                });
+            }
+
+            // TODO insert user into database here
+            return res.status(200).json({
+                message: "Account created."
+            });
+        });
     });
 
     return router;
