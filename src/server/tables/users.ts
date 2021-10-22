@@ -1,6 +1,10 @@
 import { QueryResult } from "pg";
 import { UsersInsertCallback, UsersQueryCallback } from "../../ts/types/users";
 import dbPool from "../util/databasePool";
+import generateRelation from "../util/generateRelation";
+// TODO add truthy checks for function parameters
+
+generateRelation("users", { id: "SERIAL PRIMARY KEY", email: "VARCHAR(255)", password: "VARCHAR(255)" });
 
 /**
  * Queries postgresql database users table for a single row with id.

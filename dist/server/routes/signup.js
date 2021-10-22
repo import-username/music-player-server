@@ -38,7 +38,6 @@ function signupRoute() {
                 }
                 Users.save(req.body.email, hash, function (err, result) {
                     if (err) {
-                        console.debug(err);
                         return res.status(500).json({
                             message: "Internal server error."
                         });

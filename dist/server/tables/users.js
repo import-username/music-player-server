@@ -11,6 +11,9 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 exports.__esModule = true;
 exports.save = exports.findByEmail = exports.findById = void 0;
 var databasePool_1 = require("../util/databasePool");
+var generateRelation_1 = require("../util/generateRelation");
+// TODO add truthy checks for function parameters
+(0, generateRelation_1["default"])("users", { id: "SERIAL PRIMARY KEY", email: "VARCHAR(255)", password: "VARCHAR(255)" });
 /**
  * Queries postgresql database users table for a single row with id.
  * @param {string} id Id to query for.

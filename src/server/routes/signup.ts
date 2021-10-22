@@ -44,7 +44,6 @@ export default function signupRoute(): express.Router {
 
                 Users.save(req.body.email, hash, (err: Error, result: string) => {
                     if (err) {
-                        console.debug(err);
                         return res.status(500).json({
                             message: "Internal server error."
                         });
