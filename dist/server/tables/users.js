@@ -12,7 +12,6 @@ exports.__esModule = true;
 exports.save = exports.findByEmail = exports.findById = void 0;
 var databasePool_1 = require("../util/databasePool");
 var generateRelation_1 = require("../util/generateRelation");
-// TODO add truthy checks for function parameters
 (0, generateRelation_1["default"])("users", { id: "SERIAL PRIMARY KEY", email: "VARCHAR(255)", password: "VARCHAR(255)" });
 /**
  * Queries postgresql database users table for a single row with id.
@@ -20,13 +19,18 @@ var generateRelation_1 = require("../util/generateRelation");
  * @param callback
  */
 function findById(id, callback) {
-    var queryText = "SELECT * FROM users WHERE id=$1;";
-    databasePool_1["default"].query(queryText, [id], function (err, queryResult) {
-        if (err) {
-            return callback(err, null);
-        }
-        return callback(null, __spreadArray([], queryResult.rows, true)[0]);
-    });
+    if (id && callback) {
+        var queryText = "SELECT * FROM users WHERE id=$1;";
+        databasePool_1["default"].query(queryText, [id], function (err, queryResult) {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, __spreadArray([], queryResult.rows, true)[0]);
+        });
+    }
+    else {
+        return callback(new Error("Invalid or insufficient parameters."), null);
+    }
 }
 exports.findById = findById;
 /**
@@ -35,13 +39,18 @@ exports.findById = findById;
  * @param callback
  */
 function findByEmail(email, callback) {
-    var queryText = "SELECT * FROM users WHERE email=$1;";
-    databasePool_1["default"].query(queryText, [email], function (err, queryResult) {
-        if (err) {
-            return callback(err, null);
-        }
-        return callback(null, __spreadArray([], queryResult.rows, true)[0]);
-    });
+    if (email && callback) {
+        var queryText = "SELECT * FROM users WHERE email=$1;";
+        databasePool_1["default"].query(queryText, [email], function (err, queryResult) {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, __spreadArray([], queryResult.rows, true)[0]);
+        });
+    }
+    else {
+        return callback(new Error("Invalid or insufficient parameters."), null);
+    }
 }
 exports.findByEmail = findByEmail;
 /**
@@ -51,12 +60,17 @@ exports.findByEmail = findByEmail;
  * @param callback
  */
 function save(email, password, callback) {
-    var queryText = "INSERT INTO users VALUES(DEFAULT, $1, $2);";
-    databasePool_1["default"].query(queryText, [email, password], function (err, queryResult) {
-        if (err) {
-            return callback(err, null);
-        }
-        return callback(null, "Success");
-    });
+    if (email && password && callback) {
+        var queryText = "INSERT INTO users VALUES(DEFAULT, $1, $2);";
+        databasePool_1["default"].query(queryText, [email, password], function (err, queryResult) {
+            if (err) {
+                return callback(err, null);
+            }
+            return callback(null, "Success");
+        });
+    }
+    else {
+        return callback(new Error("Invalid or insufficient parameters."), null);
+    }
 }
 exports.save = save;
