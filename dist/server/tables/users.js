@@ -48,7 +48,7 @@ exports.findByEmail = findByEmail;
  * @param callback
  */
 function save(email, password, callback) {
-    var queryText = "INSERT INTO users VALUES($1, $2);";
+    var queryText = "INSERT INTO users VALUES(DEFAULT, $1, $2);";
     databasePool_1["default"].query(queryText, [email, password], function (err, queryResult) {
         if (err) {
             return callback(err, null);

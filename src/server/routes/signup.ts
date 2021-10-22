@@ -1,6 +1,7 @@
 import * as express from "express";
 import { IUserQuery } from "../../ts/interfaces/users";
 import * as Users from "../tables/users";
+import * as bcrypt from "bcrypt";
 
 const router: express.Router = express.Router();
 
@@ -34,9 +35,25 @@ export default function signupRoute(): express.Router {
                 });
             }
 
-            // TODO insert user into database here
-            return res.status(200).json({
-                message: "Account created."
+            bcrypt.hash(req.body.password, 10, (err: Error, hash) => {
+                if (err) {
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                }
+
+                Users.save(req.body.email, hash, (err: Error, result: string) => {
+                    if (err) {
+                        console.debug(err);
+                        return res.status(500).json({
+                            message: "Internal server error."
+                        });
+                    }
+
+                    return res.status(200).json({
+                        message: "Account created."
+                    });
+                });
             });
         });
     });

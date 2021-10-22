@@ -2,6 +2,7 @@
 exports.__esModule = true;
 var express = require("express");
 var Users = require("../tables/users");
+var bcrypt = require("bcrypt");
 var router = express.Router();
 router.use(express.json());
 /**
@@ -29,9 +30,23 @@ function signupRoute() {
                     message: "User with that email already exists."
                 });
             }
-            // TODO insert user into database here
-            return res.status(200).json({
-                message: "Account created."
+            bcrypt.hash(req.body.password, 10, function (err, hash) {
+                if (err) {
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                }
+                Users.save(req.body.email, hash, function (err, result) {
+                    if (err) {
+                        console.debug(err);
+                        return res.status(500).json({
+                            message: "Internal server error."
+                        });
+                    }
+                    return res.status(200).json({
+                        message: "Account created."
+                    });
+                });
             });
         });
     });

@@ -43,7 +43,7 @@ export function findByEmail(email: string, callback: UsersQueryCallback): void {
  * @param callback 
  */
 export function save(email: string, password: string, callback: UsersInsertCallback): void {
-    const queryText: string = "INSERT INTO users VALUES($1, $2);";
+    const queryText: string = "INSERT INTO users VALUES(DEFAULT, $1, $2);";
 
     dbPool.query(queryText, [email, password], (err: Error, queryResult: QueryResult) => {
         if (err) {
