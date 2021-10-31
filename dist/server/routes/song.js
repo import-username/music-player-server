@@ -7,7 +7,6 @@ var fs = require("fs");
 var uploadFile_1 = require("../middleware/uploadFile");
 var router = express.Router();
 var uploadPath = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
-// Make uploads directory if it doesn't exist.
 if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
 }

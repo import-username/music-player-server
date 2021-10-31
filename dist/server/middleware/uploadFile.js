@@ -5,7 +5,6 @@ var path = require("path");
 var fs = require("fs");
 var uploadPath = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
 var validExtensions = /.mp3|.mp4|.png|.jpg|.jpeg/;
-// Make uploads directory if it doesn't exist.
 if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
 }
@@ -24,7 +23,6 @@ function uploadFile(req, res, next) {
             var fileStream = fs.createWriteStream(path.join(uploadPath, uniqueFilename, uniqueFilename + path.extname(filename)));
             file.pipe(fileStream);
             file.on("end", function () {
-                // TODO - query database to create row for file location
             });
         }
         else {

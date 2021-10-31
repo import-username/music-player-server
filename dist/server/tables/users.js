@@ -13,11 +13,6 @@ exports.save = exports.findByEmail = exports.findById = void 0;
 var databasePool_1 = require("../util/databasePool");
 var generateRelation_1 = require("../util/generateRelation");
 (0, generateRelation_1["default"])("users", { id: "SERIAL PRIMARY KEY", email: "VARCHAR(255)", password: "VARCHAR(255)" });
-/**
- * Queries postgresql database users table for a single row with id.
- * @param {string} id Id to query for.
- * @param callback
- */
 function findById(id, callback) {
     if (id && callback) {
         var queryText = "SELECT * FROM users WHERE id=$1;";
@@ -33,11 +28,6 @@ function findById(id, callback) {
     }
 }
 exports.findById = findById;
-/**
- * Queries postgresql database users table for a single row with email.
- * @param {string} email Email to query for.
- * @param callback
- */
 function findByEmail(email, callback) {
     if (email && callback) {
         var queryText = "SELECT * FROM users WHERE email=$1;";
@@ -53,12 +43,6 @@ function findByEmail(email, callback) {
     }
 }
 exports.findByEmail = findByEmail;
-/**
- * Inserts a new user row into users table.
- * @param email Email value to add to row.
- * @param password Password value to add to row.
- * @param callback
- */
 function save(email, password, callback) {
     if (email && password && callback) {
         var queryText = "INSERT INTO users VALUES(DEFAULT, $1, $2);";

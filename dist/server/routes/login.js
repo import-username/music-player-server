@@ -40,7 +40,7 @@ function loginRoute() {
                 var JWT = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "31d" });
                 var cookieOptions = {
                     httpOnly: true,
-                    maxAge: 1000 * 60 * 60 * 722 // 1 second => 1 minute => 1 hour => 722 hours
+                    maxAge: 1000 * 60 * 60 * 722
                 };
                 return res.status(200).cookie("cookie.auth", JWT, cookieOptions).json({
                     message: "Successfully logged in."
