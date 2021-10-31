@@ -1,12 +1,13 @@
 import * as express from "express";
 import * as jwt from "jsonwebtoken";
 import * as dotenv from "dotenv";
+import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 dotenv.config();
 
 /**
  * Middleware for authenticating client requests.
  */
-export default function auth(req: express.Request, res: express.Response, next: express.NextFunction): express.Response | void {
+export default function auth(req: IAuthRequest, res: express.Response, next: express.NextFunction): express.Response | void {
     const authCookie: string = req.cookies["cookie.auth"];
     
     // If cookie named cookie.auth could not be found in cookie header, respond with 401.
@@ -29,6 +30,11 @@ export default function auth(req: express.Request, res: express.Response, next: 
             return res.status(401).json({
                 message: "Failed to authenticate user."
             });
+        }
+
+        // Add user object to request object
+        req.user = {
+            id: decoded.id
         }
 
         // Continue request to next middleware/endpoint if all conditionals pass.

@@ -27,6 +27,10 @@ function auth(req, res, next) {
                 message: "Failed to authenticate user."
             });
         }
+        // Add user object to request object
+        req.user = {
+            id: decoded.id
+        };
         // Continue request to next middleware/endpoint if all conditionals pass.
         return next();
     });
