@@ -4,15 +4,15 @@ var databasePool_1 = require("../util/databasePool");
 function generateRelation(relationAlias, columns) {
     if (columns === void 0) { columns = {}; }
     if ((typeof relationAlias === "string") && isValidColumnObject(columns)) {
-        var existsQuery = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name=$1);";
+        var existsQuery = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name=$1)";
         var existsValues = [relationAlias];
         databasePool_1["default"].query(existsQuery, existsValues, function (err, result) {
             if (err) {
                 throw err;
             }
-            var tableExists = result.rows[0].exists;
+            var tableExists = result.rows[0]["exists"];
             if (!tableExists) {
-                var createQuery = "CREATE TABLE users(" + getColumns(columns) + ");";
+                var createQuery = "CREATE TABLE " + relationAlias + "(" + getColumns(columns) + ");";
                 databasePool_1["default"].query(createQuery, function (err, createResult) {
                     if (err) {
                         throw err;

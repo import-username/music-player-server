@@ -8,7 +8,8 @@ import dbPool from "../util/databasePool";
  */
 export default function generateRelation(relationAlias: string, columns = {}) {
     if ((typeof relationAlias === "string") && isValidColumnObject(columns)) {
-        const existsQuery: string = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name=$1);";
+        const existsQuery: string = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name=$1)";
+
         const existsValues: string[] = [relationAlias];
 
         // Query database to see if table/relation exists.
@@ -16,12 +17,12 @@ export default function generateRelation(relationAlias: string, columns = {}) {
             if (err) {
                 throw err;
             }
-
-            const tableExists: boolean = result.rows[0].exists;
+            
+            const tableExists: boolean = result.rows[0]["exists"];
 
             // If tableExists is falsy, query database again to create table/relation with provided relationAlias as name.
             if (!tableExists) {
-                const createQuery: string = `CREATE TABLE users(${getColumns(columns)});`;
+                const createQuery: string = `CREATE TABLE ${relationAlias}(${getColumns(columns)});`;
 
                 dbPool.query(createQuery, (err: Error, createResult: QueryResult) => {
                     if (err) {
