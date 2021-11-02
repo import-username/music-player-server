@@ -1,0 +1,1 @@
+export type SaveQueryCallback = (err: Error, result: string) => void
