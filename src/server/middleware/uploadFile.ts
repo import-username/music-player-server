@@ -2,8 +2,9 @@ import * as express from "express";
 import * as Busboy from "busboy";
 import * as path from "path";
 import * as fs from "fs";
-import * as Songs from "../tables/songs";
+import Songs from "../tables/songs";
 import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
+import { ISaveQuery } from "../../ts/interfaces/songs";
 
 const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
 
@@ -29,9 +30,21 @@ export default function uploadFile(req: IAuthRequest, res: express.Response, nex
         if (fieldname === "songFile" && validExtensions.test(path.extname(filename))) {
             const uniqueFilename: string = Date.now() + "-" + Math.floor(Math.random() * 10E9);
             
-            Songs.save(req.user.id, `/${uniqueFilename}/${uniqueFilename}${path.extname(filename)}`,
-                    path.basename(filename, path.extname(filename)), (err: Error, result: string) => {
+            const saveQueryData: ISaveQuery = {
+                id: "DEFAULT",
+                user_id: req.user.id,
+                song_file_path: `/${uniqueFilename}/${uniqueFilename}${path.extname(filename)}`,
+                song_title: path.basename(filename, path.extname(filename)),
+                song_thumbnail_path: "NULL",
+                song_description: "NULL",
+                song_author: "NULL",
+                song_playlists: "DEFAULT",
+                song_favorite: "FALSE"
+            }
+
+            Songs.save(saveQueryData, (err: Error, result: string) => {
                 if (err) {
+                    console.debug(err);
                     return res.status(500).json({
                         message: "Internal server error."
                     });
