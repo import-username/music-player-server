@@ -1,0 +1,1 @@
+export type QueryCallback = (err: Error, result: string | object) => void;
