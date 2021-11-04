@@ -8,7 +8,7 @@ import { ISaveQuery } from "../../ts/interfaces/songs";
 
 const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
 
-const validExtensions: RegExp = /.mp3|.mp4|.png|.jpg|.jpeg/
+const validExtensions: RegExp = /.mp3|.mp4|.png|.jpg|.jpeg/;
 
 // Make uploads directory if it doesn't exist.
 if (!fs.existsSync(uploadPath)) {
@@ -44,7 +44,8 @@ export default function uploadFile(req: IAuthRequest, res: express.Response, nex
 
             Songs.save(saveQueryData, (err: Error, result: string) => {
                 if (err) {
-                    console.debug(err);
+                    busboy.removeAllListeners();
+                    
                     return res.status(500).json({
                         message: "Internal server error."
                     });
@@ -57,6 +58,8 @@ export default function uploadFile(req: IAuthRequest, res: express.Response, nex
                 file.pipe(fileStream);
             });
         } else {
+            busboy.removeAllListeners();
+
             return res.status(401).json({
                 message: "Unauthorized mimetype or field name."
             });

@@ -33,7 +33,7 @@ function uploadFile(req, res, next) {
             };
             songs_1["default"].save(saveQueryData, function (err, result) {
                 if (err) {
-                    console.debug(err);
+                    busboy.removeAllListeners();
                     return res.status(500).json({
                         message: "Internal server error."
                     });
@@ -44,6 +44,7 @@ function uploadFile(req, res, next) {
             });
         }
         else {
+            busboy.removeAllListeners();
             return res.status(401).json({
                 message: "Unauthorized mimetype or field name."
             });
