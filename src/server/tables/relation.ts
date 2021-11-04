@@ -2,6 +2,7 @@ import { QueryCallback } from "../../ts/types/relation";
 import generateRelation from "../util/generateRelation";
 import dbPool from "../util/databasePool";
 import { IFindQueryOptions, IRelation } from "../../ts/interfaces/relation";
+import findQuery from "./query/findQuery";
 
 function Relation(relationAlias: string, relationColumns: object) {
     this.relationAlias = relationAlias;
@@ -43,61 +44,7 @@ Relation.prototype.save = function(columns: object, queryOptions?: any | QueryCa
     }
 }
 
-Relation.prototype.find = function(queryFilter: object, queryOptions?: IFindQueryOptions | QueryCallback, callback?: QueryCallback) {
-    // Return an error if too few or too many arguments are provided.
-    if (arguments.length > 3 || arguments.length < 2) {
-        return callback(new Error(`Insufficient arguments. Expected 2-3 got ${arguments.length}.`), null);
-    }
-
-    // If arg len is 2, callback will be second parameter.
-    if (arguments.length === 2) {
-        callback = <QueryCallback> queryOptions;
-        queryOptions = <IFindQueryOptions> {};
-    } else {
-        // Cast to IFindQueryOptions to avoid having to cast later when using IFindQueryOptions properties.
-        queryOptions = <IFindQueryOptions> queryOptions;
-    }
-
-    // Iterate over each property key in queryFilter and make sure it's a valid column in the relation.
-    for (let i in queryFilter) {
-        if (!Object.keys(this.relationColumns).includes(i)) {
-            return callback(new Error(`Filter property ${i} does not match valid relation columns.`), null);
-        }
-    }
-
-    // Create string for WHERE clause in select query.
-    let whereClause: string = "";
-    let whereIndex = 1;
-    // Add each queryFilter column name and its value separated by an =.
-    for (let i in queryFilter) {
-        whereClause += `${i}=$${whereIndex} AND `;
-        whereIndex++;
-    }
-    // Get rid of unnecessary leading AND operator.
-    whereClause = whereClause.substring(0, whereClause.length - 5);
-
-    let queryText: string = `SELECT * FROM ${this.relationAlias} WHERE (${whereClause})`;
-    // Add LIMIT, SKIP if property exists in queryOptions or 0 if not.
-    queryText += ` OFFSET $${whereIndex}`;
-    queryText += queryOptions.limit ? ` LIMIT $${++whereIndex}` : "";
-    queryText += ";";
-
-    // Create array of values to substitute in for prepared statement.
-    const queryValues: Array<any> = Object.values(queryFilter);
-    queryValues.push(queryOptions.skip || queryOptions.offset || 0);
-
-    if (queryOptions.limit) {
-        queryValues.push(queryOptions.limit);
-    }
-
-    dbPool.query(queryText, queryValues, (err: Error, result: object) => {
-        if (err) {
-            return callback(err, null);
-        }
-
-        return callback(null, result);
-    });
-}
+Relation.prototype.find = findQuery;
 
 Relation.prototype.autoGenerateRelation = generateRelation;
 

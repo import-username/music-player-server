@@ -3,6 +3,7 @@ exports.__esModule = true;
 exports.createRelation = void 0;
 var generateRelation_1 = require("../util/generateRelation");
 var databasePool_1 = require("../util/databasePool");
+var findQuery_1 = require("./query/findQuery");
 function Relation(relationAlias, relationColumns) {
     this.relationAlias = relationAlias;
     this.relationColumns = relationColumns;
@@ -33,45 +34,7 @@ Relation.prototype.save = function (columns, queryOptions, callback) {
         return callback(new Error("Insufficient columns. " + Object.keys(this.relationColumns).length + " required, " + Object.keys(columns).length + " provided."), null);
     }
 };
-Relation.prototype.find = function (queryFilter, queryOptions, callback) {
-    if (arguments.length > 3 || arguments.length < 2) {
-        return callback(new Error("Insufficient arguments. Expected 2-3 got " + arguments.length + "."), null);
-    }
-    if (arguments.length === 2) {
-        callback = queryOptions;
-        queryOptions = {};
-    }
-    else {
-        queryOptions = queryOptions;
-    }
-    for (var i in queryFilter) {
-        if (!Object.keys(this.relationColumns).includes(i)) {
-            return callback(new Error("Filter property " + i + " does not match valid relation columns."), null);
-        }
-    }
-    var whereClause = "";
-    var whereIndex = 1;
-    for (var i in queryFilter) {
-        whereClause += i + "=$" + whereIndex + " AND ";
-        whereIndex++;
-    }
-    whereClause = whereClause.substring(0, whereClause.length - 5);
-    var queryText = "SELECT * FROM " + this.relationAlias + " WHERE (" + whereClause + ")";
-    queryText += " OFFSET $" + whereIndex;
-    queryText += queryOptions.limit ? " LIMIT $" + ++whereIndex : "";
-    queryText += ";";
-    var queryValues = Object.values(queryFilter);
-    queryValues.push(queryOptions.skip || queryOptions.offset || 0);
-    if (queryOptions.limit) {
-        queryValues.push(queryOptions.limit);
-    }
-    databasePool_1["default"].query(queryText, queryValues, function (err, result) {
-        if (err) {
-            return callback(err, null);
-        }
-        return callback(null, result);
-    });
-};
+Relation.prototype.find = findQuery_1["default"];
 Relation.prototype.autoGenerateRelation = generateRelation_1["default"];
 function getPreparedValuesString(columnsObject) {
     var preparedValues = "";
