@@ -1,7 +1,7 @@
 import { QueryCallback } from "../../ts/types/relation";
 import generateRelation from "../util/generateRelation";
 import dbPool from "../util/databasePool";
-import { IRelation } from "../../ts/interfaces/relation";
+import { IFindQueryOptions, IRelation } from "../../ts/interfaces/relation";
 
 function Relation(relationAlias: string, relationColumns: object) {
     this.relationAlias = relationAlias;
@@ -9,18 +9,10 @@ function Relation(relationAlias: string, relationColumns: object) {
 }
 
 /**
- * @callback saveQueryCallback
- * @param {Error} err - Error object.
- * @param {string} queryResult The query result string.
- */
-
-/**
  * Saves a song row to songs table.
- * @param {string} userId Id of user that should own this row.
- * @param {string} filePath Path to the mp3/mp4/etc song file, including the enclosing file directory.
- * @param {string} title Title of song
- * @param {object} optionals Object of optional columns to insert into this row.
- * @param {saveQueryCallback} callback
+ * @param {object} columns Object of columns to save to row.
+ * @param {object} queryOptions Object of query options.
+ * @param {*} callback
  * @memberof Relation
  */
 Relation.prototype.save = function(columns: object, queryOptions?: any | QueryCallback, callback?: QueryCallback): void {
@@ -28,13 +20,12 @@ Relation.prototype.save = function(columns: object, queryOptions?: any | QueryCa
         callback = <QueryCallback> queryOptions;
         queryOptions = {};
     } else if (arguments.length === 3) {
-        queryOptions = {};
     } else {
         return callback(new Error("Invalid or insufficient parameters."), null);
     }
 
     if (Object.keys(columns).length === Object.keys(this.relationColumns).length) {
-        const queryText: string = `INSERT INTO songs (${getColumnsString(columns)}) VALUES(${getPreparedValuesString(columns)});`;
+        const queryText: string = `INSERT INTO ${this.relationAlias} (${getColumnsString(columns)}) VALUES(${getPreparedValuesString(columns)});`;
 
         const queryValues: Array<any> = Object.values(columns).filter((column) => {
             return column != "DEFAULT";
@@ -50,6 +41,62 @@ Relation.prototype.save = function(columns: object, queryOptions?: any | QueryCa
     } else {
         return callback(new Error(`Insufficient columns. ${Object.keys(this.relationColumns).length} required, ${Object.keys(columns).length} provided.`), null);
     }
+}
+
+Relation.prototype.find = function(queryFilter: object, queryOptions?: IFindQueryOptions | QueryCallback, callback?: QueryCallback) {
+    // Return an error if too few or too many arguments are provided.
+    if (arguments.length > 3 || arguments.length < 2) {
+        return callback(new Error(`Insufficient arguments. Expected 2-3 got ${arguments.length}.`), null);
+    }
+
+    // If arg len is 2, callback will be second parameter.
+    if (arguments.length === 2) {
+        callback = <QueryCallback> queryOptions;
+        queryOptions = <IFindQueryOptions> {};
+    } else {
+        // Cast to IFindQueryOptions to avoid having to cast later when using IFindQueryOptions properties.
+        queryOptions = <IFindQueryOptions> queryOptions;
+    }
+
+    // Iterate over each property key in queryFilter and make sure it's a valid column in the relation.
+    for (let i in queryFilter) {
+        if (!Object.keys(this.relationColumns).includes(i)) {
+            return callback(new Error(`Filter property ${i} does not match valid relation columns.`), null);
+        }
+    }
+
+    // Create string for WHERE clause in select query.
+    let whereClause: string = "";
+    let whereIndex = 1;
+    // Add each queryFilter column name and its value separated by an =.
+    for (let i in queryFilter) {
+        whereClause += `${i}=$${whereIndex} AND `;
+        whereIndex++;
+    }
+    // Get rid of unnecessary leading AND operator.
+    whereClause = whereClause.substring(0, whereClause.length - 5);
+
+    let queryText: string = `SELECT * FROM ${this.relationAlias} WHERE (${whereClause})`;
+    // Add LIMIT, SKIP if property exists in queryOptions or 0 if not.
+    queryText += ` OFFSET $${whereIndex}`;
+    queryText += queryOptions.limit ? ` LIMIT $${++whereIndex}` : "";
+    queryText += ";";
+
+    // Create array of values to substitute in for prepared statement.
+    const queryValues: Array<any> = Object.values(queryFilter);
+    queryValues.push(queryOptions.skip || queryOptions.offset || 0);
+
+    if (queryOptions.limit) {
+        queryValues.push(queryOptions.limit);
+    }
+
+    dbPool.query(queryText, queryValues, (err: Error, result: object) => {
+        if (err) {
+            return callback(err, null);
+        }
+
+        return callback(null, result);
+    });
 }
 
 Relation.prototype.autoGenerateRelation = generateRelation;
