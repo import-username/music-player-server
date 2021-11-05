@@ -1,3 +1,4 @@
+import { QueryResult } from "pg";
 import { IFindQueryOptions } from "../../../ts/interfaces/relation";
 import { QueryCallback } from "../../../ts/types/relation";
 import dbPool from "../../util/databasePool";
@@ -39,12 +40,25 @@ export default function findQuery(queryFilter: object, queryOptions?: IFindQuery
         queryValues.push(queryOptions.limit);
     }
 
-    dbPool.query(queryText, queryValues, (err: Error, result: object) => {
+    dbPool.query(queryText, queryValues, (err: Error, result: any) => {
         if (err) {
             return callback(err, null);
         }
 
-        return callback(null, result);
+        if ((<IFindQueryOptions> queryOptions).includeTotal) {
+            dbPool.query(`SELECT count(*) FROM ${this.relationAlias} as total_rows WHERE ${getWhereClause.call(this, queryFilter, false)};`, Object.values(queryFilter), (err, totalResult) => {
+                if (err) {
+                    return callback(err, null);
+                }
+
+                return callback(null, {
+                    rows: result.rows,
+                    total: totalResult.rows[0].count
+                });
+            });
+        } else {
+            return callback(null, { rows: result.rows });
+        }
     });
 }
 

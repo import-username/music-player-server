@@ -2,6 +2,7 @@
 exports.__esModule = true;
 var databasePool_1 = require("../../util/databasePool");
 function findQuery(queryFilter, queryOptions, callback) {
+    var _this = this;
     if (arguments.length > 3 || arguments.length < 2) {
         return callback(new Error("Insufficient arguments. Expected 2-3 got " + arguments.length + "."), null);
     }
@@ -29,7 +30,20 @@ function findQuery(queryFilter, queryOptions, callback) {
         if (err) {
             return callback(err, null);
         }
-        return callback(null, result);
+        if (queryOptions.includeTotal) {
+            databasePool_1["default"].query("SELECT count(*) FROM " + _this.relationAlias + " as total_rows WHERE " + getWhereClause.call(_this, queryFilter, false) + ";", Object.values(queryFilter), function (err, totalResult) {
+                if (err) {
+                    return callback(err, null);
+                }
+                return callback(null, {
+                    rows: result.rows,
+                    total: totalResult.rows[0].count
+                });
+            });
+        }
+        else {
+            return callback(null, { rows: result.rows });
+        }
     });
 }
 exports["default"] = findQuery;

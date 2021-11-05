@@ -1,4 +1,5 @@
 import { QueryCallback } from "../types/relation";
+import { IAuthRequest } from "./authenticatedRequest";
 
 export interface IQueryOptions {
     
@@ -16,5 +17,10 @@ export interface ISaveQueryOptions {
 export interface IFindQueryOptions {
     limit?: number | "ALL",
     skip?: number,
-    offset?: number
+    offset?: number,
+    includeTotal?: boolean
+}
+
+export interface IRelationRequest extends IAuthRequest {
+    queryOptions: any
 }
