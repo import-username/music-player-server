@@ -20,8 +20,12 @@ function createFileDirectory(name) {
 }
 
 export default function uploadFile(req: IAuthRequest, res: express.Response, next: express.NextFunction) {
-    const busboyOptions: any = {
-        headers: req.headers
+    // TODO - add file size limit
+    const busboyOptions: Busboy.BusboyConfig = {
+        headers: <Busboy.BusboyHeaders> req.headers,
+        limits: {
+            fields: 2
+        }
     }
 
     let busboy = new Busboy(busboyOptions);
@@ -57,6 +61,8 @@ export default function uploadFile(req: IAuthRequest, res: express.Response, nex
                 
                 file.pipe(fileStream);
             });
+        } else if (fieldname === "songThumbnail") {
+            console.debug("Thumbnail received");
         } else {
             busboy.removeAllListeners();
 
@@ -64,6 +70,10 @@ export default function uploadFile(req: IAuthRequest, res: express.Response, nex
                 message: "Unauthorized mimetype or field name."
             });
         }
+    });
+
+    busboy.on("field", (fieldname, value, fieldnameTruncated, valueTruncated, encoding, mimeType) => {
+        console.debug("Field received!");
     });
 
     busboy.on("finish", () => {

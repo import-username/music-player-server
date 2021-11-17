@@ -14,7 +14,10 @@ function createFileDirectory(name) {
 }
 function uploadFile(req, res, next) {
     var busboyOptions = {
-        headers: req.headers
+        headers: req.headers,
+        limits: {
+            fields: 2
+        }
     };
     var busboy = new Busboy(busboyOptions);
     busboy.on("file", function (fieldname, file, filename, encoding, mimetype) {
@@ -43,12 +46,18 @@ function uploadFile(req, res, next) {
                 file.pipe(fileStream);
             });
         }
+        else if (fieldname === "songThumbnail") {
+            console.debug("Thumbnail received");
+        }
         else {
             busboy.removeAllListeners();
             return res.status(401).json({
                 message: "Unauthorized mimetype or field name."
             });
         }
+    });
+    busboy.on("field", function (fieldname, value, fieldnameTruncated, valueTruncated, encoding, mimeType) {
+        console.debug("Field received!");
     });
     busboy.on("finish", function () {
         return next();
