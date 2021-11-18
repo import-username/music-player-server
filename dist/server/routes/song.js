@@ -12,9 +12,47 @@ var uploadPath = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "upl
 if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
 }
+function removeFileDirectories() {
+    var paths = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        paths[_i] = arguments[_i];
+    }
+    paths.forEach(function (fileDir) {
+        fs.rmSync(fileDir, { recursive: true, force: true });
+    });
+}
 function songRoute() {
     router.post("/upload-song", auth_1["default"], uploadFile_1["default"], function (req, res) {
-        return res.sendStatus(200);
+        if (req.songData.song_title) {
+            var saveQueryData = {
+                id: "DEFAULT",
+                user_id: req.user.id,
+                song_file_path: req.songData.song_file_path,
+                song_title: req.songData.song_title,
+                song_thumbnail_path: req.songData.song_thumbnail_path || "NULL",
+                song_description: req.songData.song_description || "NULL",
+                song_author: req.songData.song_author || "NULL",
+                song_playlists: "DEFAULT",
+                song_favorite: "FALSE"
+            };
+            songs_1["default"].save(saveQueryData, function (err, result) {
+                if (err) {
+                    removeFileDirectories(path.join(uploadPath, req.songData.song_file_path), path.join(uploadPath, req.songData.song_thumbnail_path));
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                }
+                return res.status(200).json({
+                    message: "Song successfully created."
+                });
+            });
+        }
+        else {
+            removeFileDirectories(path.join(uploadPath, req.songData.song_file_path), path.join(uploadPath, req.songData.song_thumbnail_path));
+            return res.status(401).json({
+                message: "Failed to provide song title (Required field)."
+            });
+        }
     });
     router.get("/get-songs", auth_1["default"], createGetSongsQueryOptions_1["default"], function (req, res) {
         songs_1["default"].find({ user_id: req.user.id }, req.queryOptions, function (err, result) {

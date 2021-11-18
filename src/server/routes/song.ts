@@ -8,6 +8,7 @@ import Songs from "../tables/songs";
 import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions";
 import { IRelationRequest } from "../../ts/interfaces/relation";
+import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
 
 const router: express.Router = express.Router();
 
@@ -18,9 +19,57 @@ if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
 }
 
+/**
+ * Deletes file directories.
+ * @param paths Paths of file directories to remove
+ */
+function removeFileDirectories(...paths: string[]) {
+    paths.forEach((fileDir: string) => {
+        fs.rmSync(fileDir, { recursive: true, force: true });
+    });
+}
+
 export default function songRoute(): express.Router {
-    router.post("/upload-song", auth, uploadFile, (req: express.Request, res: express.Response): void | express.Response => {
-        return res.sendStatus(200);
+    router.post("/upload-song", auth, uploadFile, (req: IUploadSongRequest, res: express.Response): void | express.Response => {
+        if (req.songData.song_title) {
+            const saveQueryData: ISongData = {
+                id: "DEFAULT",
+                user_id: req.user.id,
+                song_file_path: req.songData.song_file_path,
+                song_title: req.songData.song_title,
+                song_thumbnail_path: req.songData.song_thumbnail_path || "NULL",
+                song_description: req.songData.song_description || "NULL",
+                song_author: req.songData.song_author || "NULL",
+                song_playlists: "DEFAULT",
+                song_favorite: "FALSE"
+            }
+
+            Songs.save(saveQueryData, (err: Error, result: string) => {
+                if (err) {
+                    removeFileDirectories(
+                        path.join(uploadPath, req.songData.song_file_path),
+                        path.join(uploadPath, req.songData.song_thumbnail_path)
+                    );
+
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                }
+
+                return res.status(200).json({
+                    message: "Song successfully created."
+                });
+            });
+        } else {
+            removeFileDirectories(
+                path.join(uploadPath, req.songData.song_file_path),
+                path.join(uploadPath, req.songData.song_thumbnail_path)
+            );
+
+            return res.status(401).json({
+                message: "Failed to provide song title (Required field)."
+            });
+        }
     });
 
     router.get("/get-songs", auth, createGetSongsQueryOptions, (req: IRelationRequest, res: express.Response): void | express.Response => {
