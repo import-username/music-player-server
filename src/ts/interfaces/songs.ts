@@ -35,3 +35,8 @@ export interface ISongData {
 export interface IUploadSongRequest extends IAuthRequest {
     songData?: ISongData
 }
+
+export interface IUploadFileError {
+    err: Error,
+    statusCode: number
+}
