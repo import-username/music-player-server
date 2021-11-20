@@ -62,7 +62,7 @@ function songRoute() {
                 });
             }
             var response = {
-                tables: result.rows.map(function (row) {
+                rows: result.rows.map(function (row) {
                     var rowObj = {};
                     for (var i in row) {
                         if (i !== "id" && i !== "user_id") {

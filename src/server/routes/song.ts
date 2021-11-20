@@ -81,7 +81,7 @@ export default function songRoute(): express.Router {
             }
 
             let response: any = {
-                tables: result.rows.map((row) => {
+                rows: result.rows.map((row) => {
                     let rowObj = {};
         
                     for (let i in row) {
