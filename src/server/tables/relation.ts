@@ -3,6 +3,7 @@ import generateRelation from "../util/generateRelation";
 import dbPool from "../util/databasePool";
 import { IFindQueryOptions, IRelation } from "../../ts/interfaces/relation";
 import findQuery from "./query/findQuery";
+import findOneQuery from "./query/findOneQuery";
 
 function Relation(relationAlias: string, relationColumns: object) {
     this.relationAlias = relationAlias;
@@ -45,6 +46,8 @@ Relation.prototype.save = function(columns: object, queryOptions?: any | QueryCa
 }
 
 Relation.prototype.find = findQuery;
+
+Relation.prototype.findOne = findOneQuery;
 
 Relation.prototype.autoGenerateRelation = generateRelation;
 

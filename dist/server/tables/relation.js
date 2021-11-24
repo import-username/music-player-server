@@ -4,6 +4,7 @@ exports.createRelation = void 0;
 var generateRelation_1 = require("../util/generateRelation");
 var databasePool_1 = require("../util/databasePool");
 var findQuery_1 = require("./query/findQuery");
+var findOneQuery_1 = require("./query/findOneQuery");
 function Relation(relationAlias, relationColumns) {
     this.relationAlias = relationAlias;
     this.relationColumns = relationColumns;
@@ -35,6 +36,7 @@ Relation.prototype.save = function (columns, queryOptions, callback) {
     }
 };
 Relation.prototype.find = findQuery_1["default"];
+Relation.prototype.findOne = findOneQuery_1["default"];
 Relation.prototype.autoGenerateRelation = generateRelation_1["default"];
 function getPreparedValuesString(columnsObject) {
     var preparedValues = "";
