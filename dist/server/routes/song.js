@@ -78,6 +78,32 @@ function songRoute() {
             return res.status(200).json(response);
         });
     });
+    router.get("/get-thumbnail/:id", auth_1["default"], function (req, res) {
+        if (req.params.id) {
+            songs_1["default"].findOne({
+                user_id: req.user.id,
+                song_thumbnail_path: "/" + req.params.id.split(".")[0] + "/" + req.params.id
+            }, function (err, result) {
+                if (err) {
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                }
+                if (!result) {
+                    return res.status(401).json({
+                        message: "Failed to find thumbnail with that id."
+                    });
+                }
+                var filePath = path.join(__dirname, "..", "..", "uploads", result.song_thumbnail_path);
+                return res.sendFile(filePath);
+            });
+        }
+        else {
+            return res.status(401).json({
+                message: "Failed to find thumbnail with that id."
+            });
+        }
+    });
     return router;
 }
 exports["default"] = songRoute;

@@ -1,11 +1,9 @@
 import * as express from "express";
 import auth from "../middleware/auth";
-import * as Busboy from "busboy";
 import * as path from "path";
 import * as fs from "fs";
 import uploadFile from "../middleware/uploadFile";
 import Songs from "../tables/songs";
-import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions";
 import { IRelationRequest } from "../../ts/interfaces/relation";
 import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
@@ -100,6 +98,35 @@ export default function songRoute(): express.Router {
 
             return res.status(200).json(response);
         });
+    });
+
+    router.get("/get-thumbnail/:id", auth, (req: IUploadSongRequest, res: express.Response) => {
+        if (req.params.id) {
+            Songs.findOne({
+                user_id: req.user.id,
+                song_thumbnail_path: `/${req.params.id.split(".")[0]}/${req.params.id}`
+            }, (err: Error, result: ISongData) => {
+                if (err) {
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                }
+
+                if (!result) {
+                    return res.status(401).json({
+                        message: "Failed to find thumbnail with that id."
+                    });
+                }
+
+                const filePath: string = path.join(__dirname, "..", "..", "uploads", result.song_thumbnail_path);
+
+                return res.sendFile(filePath);
+            });
+        } else {
+            return res.status(401).json({
+                message: "Failed to find thumbnail with that id."
+            });
+        }
     });
 
     return router;
