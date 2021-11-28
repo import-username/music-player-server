@@ -96,6 +96,8 @@ export default function uploadFile(req: IUploadSongRequest, res: express.Respons
     
                 createFileDirectory(uniqueFilename);
                 const fileStream: fs.WriteStream = fs.createWriteStream(path.join(uploadPath, uniqueFilename, uniqueFilename + path.extname(filename)));
+
+                // TODO - if file is mp4, convert to mp3 using ffmpeg, encode with cbr, or use ogg format.
                 
                 file.pipe(fileStream);
             } else if (fieldname === "songThumbnail" && validImageExtensions.test(path.extname(filename))) {

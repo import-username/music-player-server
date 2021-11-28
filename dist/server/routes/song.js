@@ -65,7 +65,7 @@ function songRoute() {
                 rows: result.rows.map(function (row) {
                     var rowObj = {};
                     for (var i in row) {
-                        if (i !== "id" && i !== "user_id") {
+                        if (i !== "user_id") {
                             rowObj[i] = row[i];
                         }
                     }
@@ -103,6 +103,47 @@ function songRoute() {
                 message: "Failed to find thumbnail with that id."
             });
         }
+    });
+    router.get("/:id", auth_1["default"], function (req, res) {
+        var range = req.headers.range;
+        if (isNaN(parseInt(req.params.id))) {
+            return res.status(401).json({
+                message: "Invalid url parameter for id."
+            });
+        }
+        songs_1["default"].findOne({ user_id: req.user.id, id: req.params.id }, function (err, result) {
+            if (err) {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            }
+            if (!result) {
+                return res.status(401).json({
+                    message: "Client is not authorized to access that file."
+                });
+            }
+            var songPath = path.join(uploadPath, result.song_file_path);
+            var videoSize = fs.statSync(songPath).size;
+            if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
+                var startByte = Number(range.replace(/\D/g, ""));
+                var endByte = (startByte + (Math.pow(10, 6))) > videoSize ? videoSize - 1 : (startByte + (Math.pow(10, 6)));
+                var contentLength = endByte - startByte + 1;
+                var headers = {
+                    "Content-Range": "bytes " + startByte + "-" + endByte + "/" + videoSize,
+                    "Accept-Ranges": "bytes",
+                    "Content-Length": contentLength,
+                    "Content-Type": "audio/mp3"
+                };
+                res.writeHead(206, headers);
+                var videoStream_1 = fs.createReadStream(songPath, { start: startByte, end: endByte });
+                return videoStream_1.pipe(res);
+            }
+            res.writeHead(200, {
+                "Content-Length": videoSize
+            });
+            var videoStream = fs.createReadStream(songPath);
+            return videoStream.pipe(res);
+        });
     });
     return router;
 }

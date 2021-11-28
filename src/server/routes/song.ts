@@ -7,6 +7,7 @@ import Songs from "../tables/songs";
 import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions";
 import { IRelationRequest } from "../../ts/interfaces/relation";
 import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
+import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 
 const router: express.Router = express.Router();
 
@@ -42,6 +43,7 @@ export default function songRoute(): express.Router {
                 song_favorite: "FALSE"
             }
 
+            // TODO - add song duration to query
             Songs.save(saveQueryData, (err: Error, result: string) => {
                 if (err) {
                     removeFileDirectories(
@@ -83,7 +85,7 @@ export default function songRoute(): express.Router {
                     let rowObj = {};
         
                     for (let i in row) {
-                        if (i !== "id" && i !== "user_id") {
+                        if (i !== "user_id") {
                             rowObj[i] = row[i];
                         }
                     }
@@ -127,6 +129,64 @@ export default function songRoute(): express.Router {
                 message: "Failed to find thumbnail with that id."
             });
         }
+    });
+
+    router.get("/:id", auth, (req: IAuthRequest, res: express.Response) => {
+        // Audio files must be encoded with CBR, otherwise android client might not accept.
+        let range = req.headers.range;
+
+        if (isNaN(parseInt(req.params.id))) {
+            return res.status(401).json({
+                message: "Invalid url parameter for id."
+            });
+        }
+        
+        Songs.findOne({ user_id: req.user.id, id: req.params.id }, (err: Error, result: ISongData) => {
+            if (err) {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            }
+
+            if (!result) {
+                return res.status(401).json({
+                    message: "Client is not authorized to access that file."
+                });
+            }
+
+            const songPath = path.join(uploadPath, result.song_file_path);
+            
+            const videoSize = fs.statSync(songPath).size;
+
+            // TODO - send correct content-type header in response
+            if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
+                const startByte = Number(range.replace(/\D/g, ""));
+        
+                const endByte = (startByte + (10 ** 6)) > videoSize ? videoSize - 1 : (startByte + (10 ** 6));
+        
+                const contentLength = endByte - startByte + 1;
+                const headers = {
+                    "Content-Range": `bytes ${startByte}-${endByte}/${videoSize}`,
+                    "Accept-Ranges": "bytes",
+                    "Content-Length": contentLength,
+                    "Content-Type": "audio/mp3"
+                }
+        
+                res.writeHead(206, headers);
+        
+                const videoStream = fs.createReadStream(songPath, { start: startByte, end: endByte });
+        
+                return videoStream.pipe(res);
+            }
+    
+            res.writeHead(200, {
+                "Content-Length": videoSize
+            });
+        
+            const videoStream = fs.createReadStream(songPath);
+    
+            return videoStream.pipe(res);
+        });
     });
 
     return router;

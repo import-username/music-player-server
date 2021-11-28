@@ -1,7 +1,7 @@
 "use strict";
 exports.__esModule = true;
 var databasePool_1 = require("../../util/databasePool");
-function findQuery(queryFilter, queryOptions, callback) {
+function findOneQuery(queryFilter, queryOptions, callback) {
     if (arguments.length > 3 || arguments.length < 2) {
         return callback(new Error("Insufficient arguments. Expected 2-3 got " + arguments.length + "."), null);
     }
@@ -28,7 +28,7 @@ function findQuery(queryFilter, queryOptions, callback) {
         return callback(null, result.rows[0]);
     });
 }
-exports["default"] = findQuery;
+exports["default"] = findOneQuery;
 function isValidQueryFilter(queryFilter) {
     for (var i in queryFilter) {
         if (!Object.keys(this.relationColumns).includes(i)) {
