@@ -12,11 +12,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/fluent-ffmpeg": "^2.1.20",
     "bcrypt": "^5.0.1",
     "busboy": "^0.2.14",
     "cookie-parser": "^1.4.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "fluent-ffmpeg": "^2.1.2",
     "jsonwebtoken": "^8.5.1",
     "p-queue": "^6.6.2",
     "pg": "^8.7.1"
