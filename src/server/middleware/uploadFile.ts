@@ -5,10 +5,11 @@ import * as fs from "fs";
 import PQueue from "p-queue";
 import { IUploadSongRequest } from "../../ts/interfaces/songs";
 import getRandomFileName from "../../helper/randomFileName";
+import * as ffmpeg from "fluent-ffmpeg";
 
 const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
 
-const validAudioExtensions: RegExp = /.mp3|.mp4/;
+const validAudioExtensions: RegExp = /.mp3|.mp4|.ogg|.wav/;
 const validImageExtensions: RegExp = /.png|.jpg|.jpeg/;
 
 // Make uploads directory if it doesn't exist.
@@ -92,14 +93,20 @@ export default function uploadFile(req: IUploadSongRequest, res: express.Respons
             if (fieldname === "songFile" && validAudioExtensions.test(path.extname(filename))) {
                 const uniqueFilename: string = Date.now() + "-" + Math.floor(Math.random() * 10E9);
     
-                req.songData.song_file_path = `/${uniqueFilename}/${uniqueFilename}${path.extname(filename)}`;
+                req.songData.song_file_path = `/${uniqueFilename}/${uniqueFilename}.ogg`;
     
                 createFileDirectory(uniqueFilename);
-                const fileStream: fs.WriteStream = fs.createWriteStream(path.join(uploadPath, uniqueFilename, uniqueFilename + path.extname(filename)));
 
-                // TODO - if file is mp4, convert to mp3 using ffmpeg, encode with cbr, or use ogg format.
-                
-                file.pipe(fileStream);
+                // TODO - make multiple versions of file with different bitrates.
+                let ffmpegCommand: ffmpeg.FfmpegCommand = ffmpeg(file);
+
+                ffmpegCommand.withAudioCodec("libvorbis");
+                ffmpegCommand.outputOption("-vn");
+                ffmpegCommand.outputOption("-q:a 7");
+
+                ffmpegCommand.addOutput(path.join(uploadPath, uniqueFilename, uniqueFilename + ".ogg"));
+
+                ffmpegCommand.run();
             } else if (fieldname === "songThumbnail" && validImageExtensions.test(path.extname(filename))) {
                 const thumbnailName = getRandomFileName();
                 const thumbnailPath = `/${thumbnailName}/${thumbnailName}${path.extname(filename)}`

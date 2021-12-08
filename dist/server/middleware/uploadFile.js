@@ -41,8 +41,9 @@ var path = require("path");
 var fs = require("fs");
 var p_queue_1 = require("p-queue");
 var randomFileName_1 = require("../../helper/randomFileName");
+var ffmpeg = require("fluent-ffmpeg");
 var uploadPath = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
-var validAudioExtensions = /.mp3|.mp4/;
+var validAudioExtensions = /.mp3|.mp4|.ogg|.wav/;
 var validImageExtensions = /.png|.jpg|.jpeg/;
 if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
@@ -109,10 +110,14 @@ function uploadFile(req, res, next) {
             }
             if (fieldname === "songFile" && validAudioExtensions.test(path.extname(filename))) {
                 var uniqueFilename = Date.now() + "-" + Math.floor(Math.random() * 10E9);
-                req.songData.song_file_path = "/" + uniqueFilename + "/" + uniqueFilename + path.extname(filename);
+                req.songData.song_file_path = "/" + uniqueFilename + "/" + uniqueFilename + ".ogg";
                 createFileDirectory(uniqueFilename);
-                var fileStream = fs.createWriteStream(path.join(uploadPath, uniqueFilename, uniqueFilename + path.extname(filename)));
-                file.pipe(fileStream);
+                var ffmpegCommand = ffmpeg(file);
+                ffmpegCommand.withAudioCodec("libvorbis");
+                ffmpegCommand.outputOption("-vn");
+                ffmpegCommand.outputOption("-q:a 7");
+                ffmpegCommand.addOutput(path.join(uploadPath, uniqueFilename, uniqueFilename + ".ogg"));
+                ffmpegCommand.run();
             }
             else if (fieldname === "songThumbnail" && validImageExtensions.test(path.extname(filename))) {
                 var thumbnailName = (0, randomFileName_1["default"])();
