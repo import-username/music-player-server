@@ -1,6 +1,6 @@
 import * as express from "express";
 import { IUserQuery } from "../../ts/interfaces/users";
-import * as Users from "../tables/users";
+import User from "../tables/user";
 import * as bcrypt from "bcrypt";
 
 const router: express.Router = express.Router();
@@ -29,21 +29,17 @@ export default function signupRoute(): express.Router {
         }
 
         // Query for row with email from users table.
-        Users.findByEmail(req.body.email, (err: Error, user: IUserQuery) => {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
+        User.findOne({
+            where: {
+                email: req.body.email
             }
-
-            // Respond with 401 if row is found.
-            if (user) {
+        }).then((query) => {
+            if (query) {
                 return res.status(401).json({
                     message: "User with that email already exists."
                 });
             }
-
-            // Hash and salt password if user is not found.
+            
             bcrypt.hash(req.body.password, 10, (err: Error, hash) => {
                 if (err) {
                     return res.status(500).json({
@@ -52,17 +48,26 @@ export default function signupRoute(): express.Router {
                 }
 
                 // Query database to create new user row in users table.
-                Users.save(req.body.email, hash, (err: Error, result: string) => {
-                    if (err) {
-                        return res.status(500).json({
-                            message: "Internal server error."
-                        });
-                    }
-
+                User.create({
+                    email: req.body.email,
+                    password: hash
+                }).then((create) => {
                     return res.status(200).json({
                         message: "Account created."
                     });
+                }).catch((saveError: Error) => {
+                    console.error("Internal server error: ", saveError.message);
+
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
                 });
+            });
+        }).catch((err) => {
+            console.error("Internal server error: ", err.message);
+
+            return res.status(500).json({
+                message: "Internal server error."
             });
         });
     });

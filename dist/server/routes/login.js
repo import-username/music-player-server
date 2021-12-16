@@ -1,7 +1,7 @@
 "use strict";
 exports.__esModule = true;
 var express = require("express");
-var Users = require("../tables/users");
+var user_1 = require("../tables/user");
 var bcrypt = require("bcrypt");
 var jwt = require("jsonwebtoken");
 var dotenv = require("dotenv");
@@ -15,17 +15,17 @@ function loginRoute() {
                 message: "Invalid email or password."
             });
         }
-        Users.findByEmail(req.body.email, function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
+        user_1["default"].findOne({
+            where: {
+                email: req.body.email
             }
-            if (!user) {
+        }).then(function (query) {
+            if (!query) {
                 return res.status(401).json({
                     message: "Invalid email or password."
                 });
             }
+            var user = query.get();
             bcrypt.compare(req.body.password, user.password, function (err, validPassword) {
                 if (err) {
                     return res.status(500).json({
@@ -45,6 +45,11 @@ function loginRoute() {
                 return res.status(200).cookie("cookie.auth", JWT, cookieOptions).json({
                     message: "Successfully logged in."
                 });
+            });
+        })["catch"](function (err) {
+            console.error("Internal server error:", err.message);
+            return res.status(500).json({
+                message: "Internal server error."
             });
         });
     });
