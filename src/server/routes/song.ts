@@ -76,32 +76,49 @@ export default function songRoute(): express.Router {
     });
 
     router.get("/get-songs", auth, createGetSongsQueryOptions, (req: IRelationRequest, res: express.Response): void | express.Response => {
-        Songs.find({ user_id: req.user.id }, req.queryOptions, (err: Error, result: any) => {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
-            }
-
-            let response: any = {
-                rows: result.rows.map((row) => {
+        Song.findAll({
+            offset: req.queryOptions.offset, 
+            limit: req.queryOptions.limit,
+            where: { user_id: req.user.id + "" }
+        }).then((query) => {
+            let response: { rows: object[], total?: number | string } = {
+                rows: query.map((item) => {
+                    let itemData = item.get();
                     let rowObj = {};
-        
-                    for (let i in row) {
+
+                    for (let i in itemData) {
                         if (i !== "user_id") {
-                            rowObj[i] = row[i];
+                            rowObj[i] = itemData[i];
                         }
                     }
         
                     return rowObj;
                 })
             }
-            
-            if (result.total) {
-                response.total = result.total;
-            }
 
-            return res.status(200).json(response);
+            if (req.queryOptions.includeTotal) {
+                Song.count({
+                    where: { user_id: req.user.id + "" }
+                }).then((countQuery) => {
+                    response.total = countQuery;
+
+                    return res.status(200).json(response);
+                }).catch((err: Error) => {
+                    console.error("Internal server error: ", err.message);
+
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                });
+            } else {
+                return res.status(200).json(response);
+            }
+        }).catch((err) => {
+            console.error("Internal server error: ", err.message);
+
+            return res.status(500).json({
+                message: "Internal server error."
+            });
         });
     });
 

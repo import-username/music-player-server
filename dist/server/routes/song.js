@@ -60,27 +60,44 @@ function songRoute() {
         }
     });
     router.get("/get-songs", auth_1["default"], createGetSongsQueryOptions_1["default"], function (req, res) {
-        songs_1["default"].find({ user_id: req.user.id }, req.queryOptions, function (err, result) {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
-            }
+        song_1["default"].findAll({
+            offset: req.queryOptions.offset,
+            limit: req.queryOptions.limit,
+            where: { user_id: req.user.id + "" }
+        }).then(function (query) {
             var response = {
-                rows: result.rows.map(function (row) {
+                rows: query.map(function (item) {
+                    var itemData = item.get();
                     var rowObj = {};
-                    for (var i in row) {
+                    for (var i in itemData) {
                         if (i !== "user_id") {
-                            rowObj[i] = row[i];
+                            rowObj[i] = itemData[i];
                         }
                     }
                     return rowObj;
                 })
             };
-            if (result.total) {
-                response.total = result.total;
+            if (req.queryOptions.includeTotal) {
+                song_1["default"].count({
+                    where: { user_id: req.user.id + "" }
+                }).then(function (countQuery) {
+                    response.total = countQuery;
+                    return res.status(200).json(response);
+                })["catch"](function (err) {
+                    console.error("Internal server error: ", err.message);
+                    return res.status(500).json({
+                        message: "Internal server error."
+                    });
+                });
             }
-            return res.status(200).json(response);
+            else {
+                return res.status(200).json(response);
+            }
+        })["catch"](function (err) {
+            console.error("Internal server error: ", err.message);
+            return res.status(500).json({
+                message: "Internal server error."
+            });
         });
     });
     router.get("/get-song/:id", auth_1["default"], function (req, res) {
