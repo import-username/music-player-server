@@ -29,7 +29,7 @@ export interface ISongData {
     song_description?: string,
     song_author?: string,
     song_favorite?: "TRUE" | "FALSE",
-    song_playlists?: string
+    song_playlists?: "DEFAULT" | string[]
 }
 
 export interface IUploadSongRequest extends IAuthRequest {
