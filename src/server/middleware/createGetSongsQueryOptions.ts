@@ -4,13 +4,13 @@ import { IFindQueryOptions, IRelationRequest } from "../../ts/interfaces/relatio
 
 export default function createGetSongsQueryOptions(req: IRelationRequest, res: express.Response, next: express.NextFunction): void {
     let queryOptions: IFindQueryOptions = {
-        limit: 20,
+        limit: 30,
         offset: 0,
         includeTotal: false
     }
 
     if (req.query.limit && !isNaN(parseInt(<string> req.query.limit))) {
-        queryOptions.limit = Math.min(parseInt(<string> req.query.limit), 20);
+        queryOptions.limit = Math.min(parseInt(<string> req.query.limit), <number> queryOptions.limit);
     }
 
     if (req.query.skip && !isNaN(parseInt(<string> req.query.skip))) {

@@ -2,12 +2,12 @@
 exports.__esModule = true;
 function createGetSongsQueryOptions(req, res, next) {
     var queryOptions = {
-        limit: 20,
+        limit: 30,
         offset: 0,
         includeTotal: false
     };
     if (req.query.limit && !isNaN(parseInt(req.query.limit))) {
-        queryOptions.limit = Math.min(parseInt(req.query.limit), 20);
+        queryOptions.limit = Math.min(parseInt(req.query.limit), queryOptions.limit);
     }
     if (req.query.skip && !isNaN(parseInt(req.query.skip))) {
         queryOptions.offset = parseInt(req.query.skip);
