@@ -1,12 +1,16 @@
 "use strict";
 exports.__esModule = true;
 function createGetSongsQueryOptions(req, res, next) {
-    var queryOptions = {};
+    var queryOptions = {
+        limit: 20,
+        offset: 0,
+        includeTotal: false
+    };
     if (req.query.limit && !isNaN(parseInt(req.query.limit))) {
-        queryOptions.limit = parseInt(req.query.limit);
+        queryOptions.limit = Math.min(parseInt(req.query.limit), 20);
     }
     if (req.query.skip && !isNaN(parseInt(req.query.skip))) {
-        queryOptions.skip = parseInt(req.query.skip);
+        queryOptions.offset = parseInt(req.query.skip);
     }
     else if (req.query.offset && !isNaN(parseInt(req.query.offset))) {
         queryOptions.offset = parseInt(req.query.offset);
