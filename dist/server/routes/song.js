@@ -5,6 +5,7 @@ var auth_1 = require("../middleware/auth");
 var path = require("path");
 var fs = require("fs");
 var uploadFile_1 = require("../middleware/uploadFile");
+var song_1 = require("../tables/song");
 var songs_1 = require("../tables/songs");
 var createGetSongsQueryOptions_1 = require("../middleware/createGetSongsQueryOptions");
 var router = express.Router();
@@ -25,25 +26,29 @@ function songRoute() {
     router.post("/upload-song", auth_1["default"], uploadFile_1["default"], function (req, res) {
         if (req.songData.song_title) {
             var saveQueryData = {
-                id: "DEFAULT",
                 user_id: req.user.id,
                 song_file_path: req.songData.song_file_path,
                 song_title: req.songData.song_title,
                 song_thumbnail_path: req.songData.song_thumbnail_path || "NULL",
                 song_description: req.songData.song_description || "NULL",
                 song_author: req.songData.song_author || "NULL",
-                song_playlists: "DEFAULT",
+                song_playlists: [],
                 song_favorite: "FALSE"
             };
-            songs_1["default"].save(saveQueryData, function (err, result) {
-                if (err) {
-                    removeFileDirectories(path.join(uploadPath, req.songData.song_file_path), path.join(uploadPath, req.songData.song_thumbnail_path));
-                    return res.status(500).json({
-                        message: "Internal server error."
-                    });
-                }
+            song_1["default"].create(saveQueryData).then(function (saveQuery) {
                 return res.status(200).json({
                     message: "Song successfully created."
+                });
+            })["catch"](function (err) {
+                console.error("Internal server error: ", err.message);
+                if (req.songData.song_file_path) {
+                    removeFileDirectories(path.join(uploadPath, req.songData.song_file_path));
+                }
+                if (req.songData.song_thumbnail_path) {
+                    removeFileDirectories(path.join(uploadPath, req.songData.song_thumbnail_path));
+                }
+                return res.status(500).json({
+                    message: "Internal server error."
                 });
             });
         }
@@ -76,6 +81,29 @@ function songRoute() {
                 response.total = result.total;
             }
             return res.status(200).json(response);
+        });
+    });
+    router.get("/get-song/:id", auth_1["default"], function (req, res) {
+        songs_1["default"].findOne({ user_id: req.user.id, id: req.params.id }, function (err, result) {
+            if (err) {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            }
+            if (!result) {
+                return res.status(401).json({
+                    message: "Client does not have access to that item."
+                });
+            }
+            var row = {};
+            for (var i in result) {
+                if (i !== "user_id") {
+                    row[i] = result[i];
+                }
+            }
+            return res.status(200).json({
+                row: row
+            });
         });
     });
     router.get("/get-thumbnail/:id", auth_1["default"], function (req, res) {

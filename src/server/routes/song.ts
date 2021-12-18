@@ -3,6 +3,7 @@ import auth from "../middleware/auth";
 import * as path from "path";
 import * as fs from "fs";
 import uploadFile from "../middleware/uploadFile";
+import Song from "../tables/song";
 import Songs from "../tables/songs";
 import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions";
 import { IRelationRequest } from "../../ts/interfaces/relation";
@@ -32,32 +33,34 @@ export default function songRoute(): express.Router {
     router.post("/upload-song", auth, uploadFile, (req: IUploadSongRequest, res: express.Response): void | express.Response => {
         if (req.songData.song_title) {
             const saveQueryData: ISongData = {
-                id: "DEFAULT",
                 user_id: req.user.id,
                 song_file_path: req.songData.song_file_path,
                 song_title: req.songData.song_title,
                 song_thumbnail_path: req.songData.song_thumbnail_path || "NULL",
                 song_description: req.songData.song_description || "NULL",
                 song_author: req.songData.song_author || "NULL",
-                song_playlists: "DEFAULT",
+                song_playlists: [],
                 song_favorite: "FALSE"
             }
 
             // TODO - add song duration to query
-            Songs.save(saveQueryData, (err: Error, result: string) => {
-                if (err) {
-                    removeFileDirectories(
-                        path.join(uploadPath, req.songData.song_file_path),
-                        path.join(uploadPath, req.songData.song_thumbnail_path)
-                    );
-
-                    return res.status(500).json({
-                        message: "Internal server error."
-                    });
-                }
-
+            Song.create(saveQueryData).then((saveQuery) => {
                 return res.status(200).json({
                     message: "Song successfully created."
+                });
+            }).catch((err: Error) => {
+                console.error("Internal server error: ", err.message);
+
+                if (req.songData.song_file_path) {
+                    removeFileDirectories(path.join(uploadPath, req.songData.song_file_path));
+                }
+                
+                if (req.songData.song_thumbnail_path) {
+                    removeFileDirectories(path.join(uploadPath, req.songData.song_thumbnail_path));
+                }
+
+                return res.status(500).json({
+                    message: "Internal server error."
                 });
             });
         } else {
@@ -99,6 +102,34 @@ export default function songRoute(): express.Router {
             }
 
             return res.status(200).json(response);
+        });
+    });
+
+    router.get("/get-song/:id", auth, (req: IAuthRequest, res: express.Response) => {
+        Songs.findOne({ user_id: req.user.id, id: req.params.id }, (err: Error, result: any) => {
+            if (err) {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            }
+
+            if (!result) {
+                return res.status(401).json({
+                    message: "Client does not have access to that item."
+                });
+            }
+
+            let row = {}
+
+            for (let i in result) {
+                if (i !== "user_id") {
+                    row[i] = result[i];
+                }
+            }
+
+            return res.status(200).json({
+                row
+            });
         });
     });
 
