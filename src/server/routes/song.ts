@@ -9,6 +9,7 @@ import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions
 import { IRelationRequest } from "../../ts/interfaces/relation";
 import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
 import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
+import { Op } from "sequelize";
 
 const router: express.Router = express.Router();
 
@@ -45,9 +46,14 @@ export default function songRoute(): express.Router {
 
             // TODO - add song duration to query
             Song.create(saveQueryData).then((saveQuery) => {
-                return res.status(200).json({
-                    message: "Song successfully created."
-                });
+                return res.status(200).json(Object.keys(saveQuery.get()).filter((key) => {
+                    return key !== "user_id"
+                }).reduce((prev: object, current: string) => {
+                    return {
+                        ...prev,
+                        [current]: saveQuery[current]
+                    }
+                }, {}));
             }).catch((err: Error) => {
                 console.error("Internal server error: ", err.message);
 
@@ -76,11 +82,19 @@ export default function songRoute(): express.Router {
     });
 
     router.get("/get-songs", auth, createGetSongsQueryOptions, (req: IRelationRequest, res: express.Response): void | express.Response => {
-        Song.findAll({
+        let filter = {
             offset: req.queryOptions.offset, 
             limit: req.queryOptions.limit,
             where: { user_id: req.user.id + "" }
-        }).then((query) => {
+        }
+
+        if (req.query.titleIncludes) {
+            filter.where["song_title"] = {
+                [Op.iLike]: `%${req.query.titleIncludes}%`
+            }
+        }
+
+        Song.findAll(filter).then((query) => {
             let response: { rows: object[], total?: number | string } = {
                 rows: query.map((item) => {
                     let itemData = item.get();
@@ -123,31 +137,47 @@ export default function songRoute(): express.Router {
     });
 
     router.get("/get-song/:id", auth, (req: IAuthRequest, res: express.Response) => {
-        Songs.findOne({ user_id: req.user.id, id: req.params.id }, (err: Error, result: any) => {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
+        Song.findOne({
+            where: {
+                user_id: req.user.id + "",
+                id: req.params.id + ""
             }
+        }).then((songQuery) => {
+            console.log(songQuery)
 
-            if (!result) {
-                return res.status(401).json({
-                    message: "Client does not have access to that item."
-                });
-            }
+            return res.sendStatus(200);
+        }).catch((err: Error) => {
+            console.error("Internal server error: ", err.message);
 
-            let row = {}
-
-            for (let i in result) {
-                if (i !== "user_id") {
-                    row[i] = result[i];
-                }
-            }
-
-            return res.status(200).json({
-                row
+            return res.status(500).json({
+                message: "Internal server error."
             });
-        });
+        })
+        // Songs.findOne({ user_id: req.user.id, id: req.params.id }, (err: Error, result: any) => {
+        //     if (err) {
+        //         return res.status(500).json({
+        //             message: "Internal server error."
+        //         });
+        //     }
+
+        //     if (!result) {
+        //         return res.status(401).json({
+        //             message: "Client does not have access to that item."
+        //         });
+        //     }
+
+        //     let row = {}
+
+        //     for (let i in result) {
+        //         if (i !== "user_id") {
+        //             row[i] = result[i];
+        //         }
+        //     }
+
+        //     return res.status(200).json({
+        //         row
+        //     });
+        // });
     });
 
     router.get("/get-thumbnail/:id", auth, (req: IUploadSongRequest, res: express.Response) => {
@@ -180,7 +210,6 @@ export default function songRoute(): express.Router {
     });
 
     router.get("/:id", auth, (req: IAuthRequest, res: express.Response) => {
-        // Audio files must be encoded with CBR, otherwise android client might not accept.
         let range = req.headers.range;
 
         if (isNaN(parseInt(req.params.id))) {
@@ -210,14 +239,13 @@ export default function songRoute(): express.Router {
             if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
                 const startByte = Number(range.replace(/\D/g, ""));
         
-                const endByte = (startByte + (10 ** 6)) > videoSize ? videoSize - 1 : (startByte + (10 ** 6));
+                const endByte = (startByte + (10 ** 6)) > videoSize ? videoSize : (startByte + (10 ** 6));
         
-                const contentLength = endByte - startByte + 1;
                 const headers = {
                     "Content-Range": `bytes ${startByte}-${endByte}/${videoSize}`,
                     "Accept-Ranges": "bytes",
-                    "Content-Length": contentLength,
-                    "Content-Type": "audio/mp3"
+                    "Content-Length": videoSize,
+                    "Content-Type": "audio/ogg"
                 }
         
                 res.writeHead(206, headers);

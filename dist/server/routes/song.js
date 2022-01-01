@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 exports.__esModule = true;
 var express = require("express");
 var auth_1 = require("../middleware/auth");
@@ -8,6 +19,7 @@ var uploadFile_1 = require("../middleware/uploadFile");
 var song_1 = require("../tables/song");
 var songs_1 = require("../tables/songs");
 var createGetSongsQueryOptions_1 = require("../middleware/createGetSongsQueryOptions");
+var sequelize_1 = require("sequelize");
 var router = express.Router();
 var uploadPath = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
 if (!fs.existsSync(uploadPath)) {
@@ -36,9 +48,12 @@ function songRoute() {
                 song_favorite: "FALSE"
             };
             song_1["default"].create(saveQueryData).then(function (saveQuery) {
-                return res.status(200).json({
-                    message: "Song successfully created."
-                });
+                return res.status(200).json(Object.keys(saveQuery.get()).filter(function (key) {
+                    return key !== "user_id";
+                }).reduce(function (prev, current) {
+                    var _a;
+                    return __assign(__assign({}, prev), (_a = {}, _a[current] = saveQuery[current], _a));
+                }, {}));
             })["catch"](function (err) {
                 console.error("Internal server error: ", err.message);
                 if (req.songData.song_file_path) {
@@ -60,11 +75,18 @@ function songRoute() {
         }
     });
     router.get("/get-songs", auth_1["default"], createGetSongsQueryOptions_1["default"], function (req, res) {
-        song_1["default"].findAll({
+        var _a;
+        var filter = {
             offset: req.queryOptions.offset,
             limit: req.queryOptions.limit,
             where: { user_id: req.user.id + "" }
-        }).then(function (query) {
+        };
+        if (req.query.titleIncludes) {
+            filter.where["song_title"] = (_a = {},
+                _a[sequelize_1.Op.iLike] = "%" + req.query.titleIncludes + "%",
+                _a);
+        }
+        song_1["default"].findAll(filter).then(function (query) {
             var response = {
                 rows: query.map(function (item) {
                     var itemData = item.get();
@@ -101,25 +123,18 @@ function songRoute() {
         });
     });
     router.get("/get-song/:id", auth_1["default"], function (req, res) {
-        songs_1["default"].findOne({ user_id: req.user.id, id: req.params.id }, function (err, result) {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
+        song_1["default"].findOne({
+            where: {
+                user_id: req.user.id + "",
+                id: req.params.id + ""
             }
-            if (!result) {
-                return res.status(401).json({
-                    message: "Client does not have access to that item."
-                });
-            }
-            var row = {};
-            for (var i in result) {
-                if (i !== "user_id") {
-                    row[i] = result[i];
-                }
-            }
-            return res.status(200).json({
-                row: row
+        }).then(function (songQuery) {
+            console.log(songQuery);
+            return res.sendStatus(200);
+        })["catch"](function (err) {
+            console.error("Internal server error: ", err.message);
+            return res.status(500).json({
+                message: "Internal server error."
             });
         });
     });
@@ -171,13 +186,12 @@ function songRoute() {
             var videoSize = fs.statSync(songPath).size;
             if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
                 var startByte = Number(range.replace(/\D/g, ""));
-                var endByte = (startByte + (Math.pow(10, 6))) > videoSize ? videoSize - 1 : (startByte + (Math.pow(10, 6)));
-                var contentLength = endByte - startByte + 1;
+                var endByte = (startByte + (Math.pow(10, 6))) > videoSize ? videoSize : (startByte + (Math.pow(10, 6)));
                 var headers = {
                     "Content-Range": "bytes " + startByte + "-" + endByte + "/" + videoSize,
                     "Accept-Ranges": "bytes",
-                    "Content-Length": contentLength,
-                    "Content-Type": "audio/mp3"
+                    "Content-Length": videoSize,
+                    "Content-Type": "audio/ogg"
                 };
                 res.writeHead(206, headers);
                 var videoStream_1 = fs.createReadStream(songPath, { start: startByte, end: endByte });
