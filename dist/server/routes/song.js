@@ -185,17 +185,20 @@ function songRoute() {
             var songPath = path.join(uploadPath, result.song_file_path);
             var videoSize = fs.statSync(songPath).size;
             if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
-                var startByte = Number(range.replace(/\D/g, ""));
-                var endByte = (startByte + (Math.pow(10, 6))) > videoSize ? videoSize : (startByte + (Math.pow(10, 6)));
-                var headers = {
-                    "Content-Range": "bytes " + startByte + "-" + endByte + "/" + videoSize,
-                    "Accept-Ranges": "bytes",
-                    "Content-Length": videoSize,
-                    "Content-Type": "audio/ogg"
-                };
-                res.writeHead(206, headers);
-                var videoStream_1 = fs.createReadStream(songPath, { start: startByte, end: endByte });
-                return videoStream_1.pipe(res);
+                try {
+                    var startByte = Number(range.replace(/\D/g, ""));
+                    var endByte = Math.min(startByte + (Math.pow(10, 6)), videoSize - 1);
+                    var videoStream_1 = fs.createReadStream(songPath, { start: startByte, end: endByte });
+                    var headers = {
+                        "Content-Range": "bytes " + startByte + "-" + endByte + "/" + videoSize,
+                        "Accept-Ranges": "bytes",
+                        "Content-Length": videoSize,
+                        "Content-Type": "audio/ogg"
+                    };
+                    res.writeHead(206, headers);
+                    return videoStream_1.pipe(res);
+                }
+                catch (exc) { }
             }
             res.writeHead(200, {
                 "Content-Length": videoSize

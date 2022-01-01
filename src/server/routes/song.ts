@@ -235,26 +235,27 @@ export default function songRoute(): express.Router {
             
             const videoSize = fs.statSync(songPath).size;
 
-            // TODO - send correct content-type header in response
             if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
-                const startByte = Number(range.replace(/\D/g, ""));
-        
-                const endByte = (startByte + (10 ** 6)) > videoSize ? videoSize : (startByte + (10 ** 6));
-        
-                const headers = {
-                    "Content-Range": `bytes ${startByte}-${endByte}/${videoSize}`,
-                    "Accept-Ranges": "bytes",
-                    "Content-Length": videoSize,
-                    "Content-Type": "audio/ogg"
-                }
-        
-                res.writeHead(206, headers);
-        
-                const videoStream = fs.createReadStream(songPath, { start: startByte, end: endByte });
-        
-                return videoStream.pipe(res);
-            }
+                try {
+                    let startByte = Number(range.replace(/\D/g, ""));
+            
+                    const endByte = Math.min(startByte + (10 ** 6), videoSize - 1);
     
+                    const videoStream = fs.createReadStream(songPath, { start: startByte, end: endByte });
+
+                    const headers = {
+                        "Content-Range": `bytes ${startByte}-${endByte}/${videoSize}`,
+                        "Accept-Ranges": "bytes",
+                        "Content-Length":  videoSize,
+                        "Content-Type": "audio/ogg"
+                    }
+                    
+                    res.writeHead(206, headers);
+            
+                    return videoStream.pipe(res);
+                } catch (exc) {}
+            }
+            
             res.writeHead(200, {
                 "Content-Length": videoSize
             });
