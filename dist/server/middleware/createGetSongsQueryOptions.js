@@ -2,7 +2,7 @@
 exports.__esModule = true;
 function createGetSongsQueryOptions(req, res, next) {
     var queryOptions = {
-        limit: 30,
+        limit: 100,
         offset: 0,
         includeTotal: false
     };

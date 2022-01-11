@@ -4,7 +4,7 @@ import { IFindQueryOptions, IRelationRequest } from "../../ts/interfaces/relatio
 
 export default function createGetSongsQueryOptions(req: IRelationRequest, res: express.Response, next: express.NextFunction): void {
     let queryOptions: IFindQueryOptions = {
-        limit: 30,
+        limit: 100,
         offset: 0,
         includeTotal: false
     }
