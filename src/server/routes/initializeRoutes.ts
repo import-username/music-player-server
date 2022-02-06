@@ -3,6 +3,7 @@ import signupRoute from "./signup";
 import loginRoute from "./login";
 import authenticateRoute from "./authenticate";
 import songRoute from "./song";
+import playlistRoute from "./playlist";
 
 /**
  * Adds route objects to application middleware.
@@ -13,4 +14,5 @@ export default function initializeRoutes(app: express.Express): void {
     app.use("/login", loginRoute());
     app.use("/authenticate", authenticateRoute());
     app.use("/song", songRoute());
+    app.use("/playlist", playlistRoute());
 }
