@@ -1,11 +1,20 @@
 import { Router } from "express";
 import * as path from "path";
+import * as fs from "fs";
 import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 import auth from "../middleware/auth";
 import uploadPlaylist from "../middleware/uploadPlaylist";
 import Playlist from "../tables/playlist";
 
 const router: Router = Router();
+
+const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
+
+function removeFileDirectories(...paths: string[]) {
+    paths.forEach((fileDir: string) => {
+        fs.rmSync(fileDir, { recursive: true, force: true });
+    });
+}
 
 export default function playlistRoute(): Router {
     router.post("/create-playlist", auth, uploadPlaylist, (req: any, res) => {
@@ -86,6 +95,44 @@ export default function playlistRoute(): Router {
                 message: "Failed to find thumbnail with that id."
             });
         }
+    });
+
+    router.delete("/delete-playlist/:id", auth, (req: IAuthRequest, res) => {
+        Playlist.findOne({
+            where: {
+                id: req.params.id + "",
+                user_id: req.user.id + ""
+            }
+        }).then((playlistQuery) => {
+            if (!playlistQuery) {
+                return res.status(401).json({
+                    message: "Client does not have access to that playlist."
+                });
+            }
+
+            Playlist.destroy({
+                where: {
+                    id: req.params.id + "",
+                    user_id: req.user.id + ""
+                }
+            }).then(() => {
+                if (playlistQuery.get().playlist_thumbnail_path) {
+                    removeFileDirectories(path.join(uploadPath, playlistQuery.get().playlist_thumbnail_path.split("/")[1]));
+                }
+
+                return res.status(200).json({
+                    message: "Playlist successfully deleted."
+                });
+            }).catch((err) => {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            });
+        }).catch((err) => {
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        });
     });
 
     return router;
