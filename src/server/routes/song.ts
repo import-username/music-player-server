@@ -10,6 +10,8 @@ import { IRelationRequest } from "../../ts/interfaces/relation";
 import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
 import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 import { Op } from "sequelize";
+import Playlist from "../tables/playlist";
+import sequelize from "../tables/connection";
 
 const router: express.Router = express.Router();
 
@@ -264,6 +266,64 @@ export default function songRoute(): express.Router {
     
             return videoStream.pipe(res);
         });
+    });
+
+    router.patch("/add-to-playlist/:songId/:playlistId", auth, async (req: IAuthRequest, res) => {
+        const { songId, playlistId }: {songId?: string | undefined, playlistId?: string | undefined} = req.params;
+
+        if (!songId || !playlistId) {
+            return res.status(401).json({
+                message: "Client does not have access to that playlist or song."
+            });
+        }
+
+        try {
+            const playlistQuery = await Playlist.findOne({
+                where: {
+                    user_id: req.user.id + "",
+                    id: playlistId
+                }
+            });
+    
+            if (!playlistQuery) {
+                return res.status(401).json({
+                    message: "Client does not have access to that playlist."
+                });
+            }
+    
+            const songQuery = await Song.findOne({
+                where: {
+                    user_id: req.user.id + "",
+                    id: songId
+                }
+            });
+
+            if (!songQuery || songQuery.get()["song_playlists"].includes(playlistId)) {
+                return res.status(401).json({
+                    message: "Client does not have access to that song."
+                });
+            }
+
+            const songUpdateQuery = await Song.update(
+                { song_playlists: sequelize.fn("array_append", sequelize.col("song_playlists"), playlistId) },
+                { where: {
+                    id: songId,
+                    user_id: req.user.id + ""
+                }}
+            );
+
+            if (songUpdateQuery[0] === 0) {
+                return res.status(401).json({
+                    message: "Could not find that item."
+                });
+            }
+
+            return res.sendStatus(200);
+        } catch (exc) {
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        }
     });
 
     return router;
