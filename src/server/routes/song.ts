@@ -326,5 +326,47 @@ export default function songRoute(): express.Router {
         }
     });
 
+    router.delete("/delete/:id", auth, (req: IAuthRequest, res) => {
+        Song.findOne({
+            where: {
+                id: req.params.id + "",
+                user_id: req.user.id + ""
+            }
+        }).then((songQuery) => {
+            if (!songQuery) {
+                return res.status(401).json({
+                    message: "Client does not have access to that song."
+                });
+            }
+
+            Song.destroy({
+                where: {
+                    id: req.params.id + "",
+                    user_id: req.user.id + ""
+                }
+            }).then(() => {
+                if (songQuery.get().song_thumbnail_path) {
+                    removeFileDirectories(path.join(uploadPath, songQuery.get().song_thumbnail_path.split("/")[1]));
+                }
+                
+                if (songQuery.get().song_file_path) {
+                    removeFileDirectories(path.join(uploadPath, songQuery.get().song_file_path.split("/")[1]));
+                }
+
+                return res.status(200).json({
+                    message: "Song successfully deleted."
+                });
+            }).catch((err) => {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            });
+        }).catch((err) => {
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        });
+    });
+
     return router;
 }
