@@ -9,7 +9,7 @@ import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions
 import { IRelationRequest } from "../../ts/interfaces/relation";
 import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
 import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
-import { Op } from "sequelize";
+import { Op, Order } from "sequelize";
 import Playlist from "../tables/playlist";
 import sequelize from "../tables/connection";
 
@@ -84,10 +84,11 @@ export default function songRoute(): express.Router {
     });
 
     router.get("/get-songs", auth, createGetSongsQueryOptions, (req: IRelationRequest, res: express.Response): void | express.Response => {
-        let filter = {
+        let filter: { offset: number, limit: number, where: object, order: Order } = {
             offset: req.queryOptions.offset, 
             limit: req.queryOptions.limit,
-            where: { user_id: req.user.id + "" }
+            where: { user_id: req.user.id + "" },
+            order: [["updated_at", "DESC"]]
         }
 
         if (req.query.titleIncludes) {

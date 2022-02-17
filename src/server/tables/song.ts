@@ -38,10 +38,12 @@ const Song = sequelize.define("Song", {
     song_playlists: {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: []
-    }
+    },
 }, {
     tableName: "songs",
-    timestamps: false
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: "updated_at"
 });
 
 Song.sync();
