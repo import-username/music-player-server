@@ -5,6 +5,8 @@ import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 import auth from "../middleware/auth";
 import uploadPlaylist from "../middleware/uploadPlaylist";
 import Playlist from "../tables/playlist";
+import Song from "../tables/song";
+import { Op } from "sequelize";
 
 const router: Router = Router();
 
@@ -17,6 +19,73 @@ function removeFileDirectories(...paths: string[]) {
 }
 
 export default function playlistRoute(): Router {
+    router.get("/get-songs/:playlistId", auth, async (req: IAuthRequest, res) => {
+        if (!req.params.playlistId) {
+            return res.status(401).json({
+                message: "Must include playlist id in url query param."
+            });
+        }
+
+        try {
+            const playlistQuery = await Playlist.findOne({
+                where: {
+                    user_id: req.user.id + "",
+                    id: req.params.playlistId
+                }
+            });
+
+            if (!playlistQuery) {
+                return res.status(401).json({
+                    message: "Client does not have access to that playlist."
+                });
+            }
+
+            let skip: number = 0;
+
+            if (req.query.skip && !isNaN(parseInt(<string> req.query.skip))) {
+                skip = parseInt(<string> req.query.skip);
+            }
+
+            const songQuery = await Song.findAll({
+                where: {
+                    user_id: req.user.id + "",
+                    song_playlists: {
+                        [Op.contains]: [req.params.playlistId + ""]
+                    }
+                },
+                limit: 500,
+                offset: skip
+            });
+
+            if (!songQuery || songQuery.length < 1) {
+                return res.status(401).json({
+                    message: "Failed to find songs belonging to playlist."
+                });
+            }
+
+            const songs = songQuery.map((song) => {
+                const songObj = {};
+
+                for (let i in song.get()) {
+                    if (!/user_id|song_file_path|song_playlists/.test(i)) {
+                        songObj[i] = song.get()[i];
+                    }
+                }
+
+                return songObj;
+            });
+
+            return res.status(200).json({
+                rows: songs,
+                total: songs.length
+            });
+        } catch (exc) {
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        }
+    });
+
     router.post("/create-playlist", auth, uploadPlaylist, (req: any, res) => {
         Playlist.create({ playlist_title: req.playlistTitle, playlist_thumbnail_path: req.playlist_thumbnail_path || null, user_id: req.user.id })
             .then((query) => {
