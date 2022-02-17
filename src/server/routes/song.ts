@@ -369,5 +369,55 @@ export default function songRoute(): express.Router {
         });
     });
 
+    router.patch("/remove-from-playlist/:songId/:playlistId", auth, async (req: IAuthRequest, res) => {
+        const { songId, playlistId } = req.params;
+
+        if (!songId || isNaN(parseInt(songId))) {
+            return res.status(401).json({
+                message: "Failed to provide valid song id in url param."
+            });
+        }
+        
+        if (!playlistId || isNaN(parseInt(playlistId))) {
+            return res.status(401).json({
+                message: "Failed to provide valid playlist id in url param."
+            });
+        }
+
+        const songFindQuery = await Song.findOne({
+            where: {
+                user_id: req.user.id + "",
+                id: songId
+            }
+        });
+
+        if (!songFindQuery) {
+            return res.status(401).json({
+                message: "Client does not have access to that song."
+            });
+        }
+
+        const newArray: Array<number> = songFindQuery.get().song_playlists.filter((playlistId) => {
+            return playlistId !== playlistId;
+        });
+
+        const songUpdateQuery = await Song.update({
+            song_playlists: newArray 
+        }, {
+            where: {
+                user_id: req.user.id + "",
+                id: songId
+            }
+        });
+
+        if (songUpdateQuery[0] === 0) {
+            return res.status(401).json({
+                message: "Failed to remove song from playlist."
+            });
+        }
+
+        return res.sendStatus(200);
+    });
+
     return router;
 }
