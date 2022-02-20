@@ -88,7 +88,7 @@ export default function songRoute(): express.Router {
             offset: req.queryOptions.offset, 
             limit: req.queryOptions.limit,
             where: { user_id: req.user.id + "" },
-            order: [["updated_at", "DESC"]]
+            order: [["updated_at", "DESC"], ["id", "ASC"]]
         }
 
         if (req.query.titleIncludes) {

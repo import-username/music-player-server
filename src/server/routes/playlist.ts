@@ -51,10 +51,11 @@ export default function playlistRoute(): Router {
                     user_id: req.user.id + "",
                     song_playlists: {
                         [Op.contains]: [req.params.playlistId + ""]
-                    }
+                    },
                 },
                 limit: 500,
-                offset: skip
+                offset: skip,
+                order: [["updated_at", "DESC"], ["id", "ASC"]]
             });
 
             if (!songQuery || songQuery.length < 1) {
