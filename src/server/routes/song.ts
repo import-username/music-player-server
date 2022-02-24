@@ -12,6 +12,10 @@ import { IAuthRequest } from "../../ts/interfaces/authenticatedRequest";
 import { Op, Order } from "sequelize";
 import Playlist from "../tables/playlist";
 import sequelize from "../tables/connection";
+import fetch from "node-fetch";
+import { create as youtubeDlExec } from "youtube-dl-exec";
+import getRandomFileName from "../../helper/randomFileName";
+import createFileDirectory from "../../helper/createFileDirectory";
 
 const router: express.Router = express.Router();
 
@@ -39,14 +43,13 @@ export default function songRoute(): express.Router {
                 user_id: req.user.id,
                 song_file_path: req.songData.song_file_path,
                 song_title: req.songData.song_title,
-                song_thumbnail_path: req.songData.song_thumbnail_path || "NULL",
-                song_description: req.songData.song_description || "NULL",
-                song_author: req.songData.song_author || "NULL",
+                song_thumbnail_path: req.songData.song_thumbnail_path || null,
+                song_description: req.songData.song_description || null,
+                song_author: req.songData.song_author || null,
                 song_playlists: [],
-                song_favorite: "FALSE"
+                song_favorite: false
             }
 
-            // TODO - add song duration to query
             Song.create(saveQueryData).then((saveQuery) => {
                 return res.status(200).json(Object.keys(saveQuery.get()).filter((key) => {
                     return key !== "user_id"
@@ -83,12 +86,103 @@ export default function songRoute(): express.Router {
         }
     });
 
+    router.post("/create-from-yt", auth, async (req: IAuthRequest, res) => {
+        const { ytVideoId }: { ytVideoId?: string } = req.query;
+
+        if (!ytVideoId) {
+            return res.status(401).json({
+                message: "Client must provide ytVideoId query param."
+            });
+        }
+
+        const youtubeDl = youtubeDlExec(process.env.YOUTUBEDL_PATH);
+        const songDestinationName: string = getRandomFileName();
+        let thumbnailDestinationName: string;
+
+        try {
+            const youtubeVideo = await fetch(
+                `https://www.googleapis.com/youtube/v3/videos?key=${process.env.GOOGLE_API_KEY}&id=${ytVideoId}&part=snippet`
+            );
+    
+            if (youtubeVideo.status !== 200) {
+                return res.status(401).json({
+                    message: "Failed to find youtube video with that id."
+                });
+            }
+    
+            const videoData = (await youtubeVideo.json()).items[0].snippet;
+            const { title, thumbnails, channelTitle } = videoData;
+
+            createFileDirectory(songDestinationName);
+
+            if (thumbnails && Object.keys(thumbnails).length > 0) {
+                const thumbnailRequest = await fetch(
+                    thumbnails.standard.url
+                );
+                    
+                if (thumbnailRequest.status === 200) {
+                    thumbnailDestinationName = getRandomFileName();
+    
+                    createFileDirectory(thumbnailDestinationName);
+
+                    const thumbnailBytes = await thumbnailRequest.arrayBuffer();
+
+                    const thumbnailPath: string = path.join(uploadPath, thumbnailDestinationName, thumbnailDestinationName + ".jpg");
+
+                    fs.writeFileSync(thumbnailPath, Buffer.from(thumbnailBytes));
+                }
+            }
+    
+            const dl = await youtubeDl(`https://www.youtube.com/watch?v=${ytVideoId}`, {
+                extractAudio: true,
+                    yesPlaylist: true,
+                    audioFormat: "vorbis",
+                    retries: 0,
+                    ignoreErrors: true,
+                    maxDownloads: 1,
+                    maxFilesize: "25m",
+                    output: path.join(uploadPath, songDestinationName, `${songDestinationName}.ogg`)
+            });
+
+            const createSongQuery = await Song.create({
+                user_id: req.user.id,
+                song_file_path: `/${songDestinationName}/${songDestinationName}.ogg`,
+                song_title: title,
+                song_author: channelTitle || null,
+                song_thumbnail_path: thumbnailDestinationName ? `/${thumbnailDestinationName}/${thumbnailDestinationName}.jpg` : null
+            });
+
+            return res.status(200).json(Object.keys(createSongQuery.get()).filter((key) => {
+                return key !== "user_id"
+            }).reduce((prev: object, current: string) => {
+                return {
+                    ...prev,
+                    [current]: createSongQuery[current]
+                }
+            }, {}));
+        } catch (exc) {
+            removeFileDirectories(
+                path.join(uploadPath, songDestinationName)
+            );
+
+            if (thumbnailDestinationName) {
+                removeFileDirectories(
+                    path.join(uploadPath, thumbnailDestinationName)
+                );
+            }
+
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        }
+    });
+
     router.get("/get-songs", auth, createGetSongsQueryOptions, (req: IRelationRequest, res: express.Response): void | express.Response => {
         let filter: { offset: number, limit: number, where: object, order: Order } = {
             offset: req.queryOptions.offset, 
             limit: req.queryOptions.limit,
             where: { user_id: req.user.id + "" },
-            order: [["updated_at", "DESC"], ["id", "ASC"]]
+            order: [["created_at", "DESC"], ["id", "ASC"]]
         }
 
         if (req.query.titleIncludes) {
@@ -140,6 +234,7 @@ export default function songRoute(): express.Router {
     });
 
     router.get("/get-song/:id", auth, (req: IAuthRequest, res: express.Response) => {
+        // TODO - finish this
         Song.findOne({
             where: {
                 user_id: req.user.id + "",
@@ -235,7 +330,7 @@ export default function songRoute(): express.Router {
             }
 
             const songPath = path.join(uploadPath, result.song_file_path);
-            
+            // TODO - add error handling here
             const videoSize = fs.statSync(songPath).size;
 
             if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {

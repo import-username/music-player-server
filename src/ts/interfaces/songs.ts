@@ -28,7 +28,7 @@ export interface ISongData {
     song_title?: string,
     song_description?: string,
     song_author?: string,
-    song_favorite?: "TRUE" | "FALSE",
+    song_favorite?: boolean,
     song_playlists?: "DEFAULT" | string[]
 }
 
