@@ -15,7 +15,7 @@ const Song = sequelize.define("Song", {
     },
     song_thumbnail_path: {
         type: DataTypes.STRING,
-        defaultValue: "NULL",
+        defaultValue: null,
         allowNull: true
     },
     song_title: {
@@ -23,17 +23,17 @@ const Song = sequelize.define("Song", {
     },
     song_description: {
         type: DataTypes.TEXT,
-        defaultValue: "NULL",
+        defaultValue: null,
         allowNull: true
     },
     song_author: {
         type: DataTypes.STRING,
-        defaultValue: "NULL",
+        defaultValue: null,
         allowNull: true
     },
     song_favorite: {
         type: DataTypes.BOOLEAN,
-        defaultValue: "FALSE"
+        defaultValue: false
     },
     song_playlists: {
         type: DataTypes.ARRAY(DataTypes.STRING),

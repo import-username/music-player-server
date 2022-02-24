@@ -14,6 +14,7 @@ const Playlist = sequelize.define("Playlist", {
     },
     playlist_thumbnail_path: {
         type: DataTypes.STRING,
+        defaultValue: null,
         allowNull: true
     },
     playlist_title: {
