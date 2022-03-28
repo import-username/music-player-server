@@ -86,6 +86,7 @@ export default function songRoute(): express.Router {
         }
     });
 
+    // TODO - add duration check before downloading song
     router.post("/create-from-yt", auth, async (req: IAuthRequest, res) => {
         const { ytVideoId }: { ytVideoId?: string } = req.query;
 
@@ -116,6 +117,7 @@ export default function songRoute(): express.Router {
             createFileDirectory(songDestinationName);
 
             if (thumbnails && Object.keys(thumbnails).length > 0) {
+                // TODO - thumbnails object does not always have the standard property
                 const thumbnailRequest = await fetch(
                     thumbnails.standard.url
                 );
@@ -133,15 +135,18 @@ export default function songRoute(): express.Router {
                 }
             }
     
-            const dl = await youtubeDl(`https://www.youtube.com/watch?v=${ytVideoId}`, {
+            await youtubeDl(`https://www.youtube.com/watch?v=${ytVideoId}`, {
                 extractAudio: true,
-                    yesPlaylist: true,
-                    audioFormat: "vorbis",
-                    retries: 0,
-                    ignoreErrors: true,
-                    maxDownloads: 1,
-                    maxFilesize: "25m",
-                    output: path.join(uploadPath, songDestinationName, `${songDestinationName}.ogg`)
+                yesPlaylist: true,
+                audioFormat: "vorbis",
+                retries: 0,
+                ignoreErrors: true,
+                maxDownloads: 1,
+                maxFilesize: "25m",
+                output: path.join(uploadPath, songDestinationName, `${songDestinationName}.ogg`),
+                cookies: process.env.COOKIES_FILE,
+                forceIpv4: true,
+                verbose: true
             });
 
             const createSongQuery = await Song.create({
@@ -233,49 +238,41 @@ export default function songRoute(): express.Router {
         });
     });
 
-    router.get("/get-song/:id", auth, (req: IAuthRequest, res: express.Response) => {
-        // TODO - finish this
-        Song.findOne({
-            where: {
-                user_id: req.user.id + "",
-                id: req.params.id + ""
-            }
-        }).then((songQuery) => {
-            console.log(songQuery)
+    router.get("/get-song/:id", auth, async (req: IAuthRequest, res: express.Response) => {
+        try {
+            const songQuery = await Song.findOne({
+                where: {
+                    user_id: req.user.id + "",
+                    id: req.params.id + ""
+                }
+            });
 
-            return res.sendStatus(200);
-        }).catch((err: Error) => {
+            if (!songQuery) {
+                return res.status(401).json({
+                    message: "Client does not have access to that item."
+                });
+            }
+
+            const song = songQuery.get();
+
+            let row = {}
+
+            for (let i in song) {
+                if (i !== "user_id") {
+                    row[i] = song[i];
+                }
+            }
+
+            return res.status(200).json({
+                row
+            });
+        } catch (err: any) {
             console.error("Internal server error: ", err.message);
 
             return res.status(500).json({
                 message: "Internal server error."
             });
-        })
-        // Songs.findOne({ user_id: req.user.id, id: req.params.id }, (err: Error, result: any) => {
-        //     if (err) {
-        //         return res.status(500).json({
-        //             message: "Internal server error."
-        //         });
-        //     }
-
-        //     if (!result) {
-        //         return res.status(401).json({
-        //             message: "Client does not have access to that item."
-        //         });
-        //     }
-
-        //     let row = {}
-
-        //     for (let i in result) {
-        //         if (i !== "user_id") {
-        //             row[i] = result[i];
-        //         }
-        //     }
-
-        //     return res.status(200).json({
-        //         row
-        //     });
-        // });
+        }
     });
 
     router.get("/get-thumbnail/:id", auth, (req: IUploadSongRequest, res: express.Response) => {
