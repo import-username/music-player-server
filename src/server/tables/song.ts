@@ -42,8 +42,7 @@ const Song = sequelize.define("Song", {
 }, {
     tableName: "songs",
     timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at"
+    underscored: true
 });
 
 Song.sync();
