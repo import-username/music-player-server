@@ -4,9 +4,9 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "cleanDist": "concurrently -m 1 \"rm -r ./dist/server/*\" \"rm -r ./dist/ts/*\" \"tsc --build\"",
-    "server": "concurrently \"nodemon ./dist/server/main.js\" \"tsc --watch\""
+    "build": "concurrently -m 1 \"rm -r ./dist/server/*\" \"rm -r ./dist/ts/*\" \"tsc --build\"",
+    "server": "concurrently \"nodemon ./dist/server/main.js\" \"tsc --watch\"",
+    "dev": "tsnd ./src/server/main.ts"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +33,7 @@
     "@types/node": "^16.11.2",
     "@types/pg": "^8.6.1",
     "concurrently": "^6.3.0",
-    "nodemon": "^2.0.14"
+    "nodemon": "^2.0.14",
+    "ts-node-dev": "^1.1.8"
   }
 }
