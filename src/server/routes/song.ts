@@ -19,7 +19,7 @@ import createFileDirectory from "../../helper/createFileDirectory";
 
 const router: express.Router = express.Router();
 
-const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
+const uploadPath: string = process.env.UPLOAD_DIR;
 
 // Make uploads directory if it doesn't exist.
 if (!fs.existsSync(uploadPath)) {
@@ -293,7 +293,7 @@ export default function songRoute(): express.Router {
                     });
                 }
 
-                const filePath: string = path.join(__dirname, "..", "..", "uploads", result.song_thumbnail_path);
+                const filePath: string = path.join(uploadPath, result.song_thumbnail_path);
 
                 return res.sendFile(filePath);
             });

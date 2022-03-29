@@ -10,7 +10,7 @@ import { Op } from "sequelize";
 
 const router: Router = Router();
 
-const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
+const uploadPath: string = process.env.UPLOAD_DIR;
 
 function removeFileDirectories(...paths: string[]) {
     paths.forEach((fileDir: string) => {
@@ -150,9 +150,7 @@ export default function playlistRoute(): Router {
 
                 const playlistItem = playlist.get();
 
-                const filePath: string = process.env.UPLOAD_DIR
-                    ? path.join(process.env.UPLOAD_DIR, playlistItem.playlist_thumbnail_path)
-                    : path.join(__dirname, "..", "..", "uploads", playlistItem.playlist_thumbnail_path);
+                const filePath: string = path.join(uploadPath, playlistItem.playlist_thumbnail_path);
 
                 return res.sendFile(filePath);
             }).catch((err) => {

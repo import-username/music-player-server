@@ -4,7 +4,7 @@ import * as path from "path";
 import * as fs from "fs";
 import createFileDirectory from "../../helper/createFileDirectory";
 
-const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
+const uploadPath: string = process.env.UPLOAD_DIR;
 
 const validExtensions: RegExp = /.jpg|.png/;
 

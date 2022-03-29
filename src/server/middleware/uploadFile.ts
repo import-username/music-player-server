@@ -7,7 +7,7 @@ import { IUploadSongRequest } from "../../ts/interfaces/songs";
 import getRandomFileName from "../../helper/randomFileName";
 import * as ffmpeg from "fluent-ffmpeg";
 
-const uploadPath: string = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
+const uploadPath: string = process.env.UPLOAD_DIR;
 
 const validAudioExtensions: RegExp = /.mp3|.mp4|.ogg|.wav/;
 const validImageExtensions: RegExp = /.png|.jpg|.jpeg/;
