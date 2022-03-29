@@ -15,6 +15,7 @@ import fetch from "node-fetch";
 import { create as youtubeDlExec } from "youtube-dl-exec";
 import getRandomFileName from "../../helper/randomFileName";
 import createFileDirectory from "../../helper/createFileDirectory";
+import * as moment from "moment";
 
 const router: express.Router = express.Router();
 
@@ -85,7 +86,6 @@ export default function songRoute(): express.Router {
         }
     });
 
-    // TODO - add duration check before downloading song
     router.post("/create-from-yt", auth, async (req: IAuthRequest, res) => {
         const { ytVideoId }: { ytVideoId?: string } = req.query;
 
@@ -100,70 +100,97 @@ export default function songRoute(): express.Router {
         let thumbnailDestinationName: string;
 
         try {
-            const youtubeVideo = await fetch(
-                `https://www.googleapis.com/youtube/v3/videos?key=${process.env.GOOGLE_API_KEY}&id=${ytVideoId}&part=snippet`
+            const videoContentRequest = await fetch(
+                `https://www.googleapis.com/youtube/v3/videos?key=${process.env.GOOGLE_API_KEY}&id=${ytVideoId}&part=contentDetails`
             );
-    
-            if (youtubeVideo.status !== 200) {
-                return res.status(401).json({
-                    message: "Failed to find youtube video with that id."
-                });
-            }
-    
-            const videoData = (await youtubeVideo.json()).items[0].snippet;
-            const { title, thumbnails, channelTitle } = videoData;
 
-            createFileDirectory(songDestinationName);
+            if (videoContentRequest.status === 200) {
+                const videoContentDetails: { duration: number } = (await videoContentRequest.json()).items[0].contentDetails;
 
-            if (thumbnails && Object.keys(thumbnails).length > 0) {
-                // TODO - thumbnails object does not always have the standard property
-                const thumbnailRequest = await fetch(
-                    thumbnails.standard.url
+                const maxDurationSeconds: number = 900;
+
+                const videoDuration: number = moment.duration(videoContentDetails.duration).asSeconds();
+
+                if (videoDuration > maxDurationSeconds) {
+                    return res.status(400).json({
+                        message: `Video exceeds maximum duration of ${maxDurationSeconds / 60} minutes.`
+                    });
+                }
+
+                const youtubeVideo = await fetch(
+                    `https://www.googleapis.com/youtube/v3/videos?key=${process.env.GOOGLE_API_KEY}&id=${ytVideoId}&part=snippet`
                 );
-                    
-                if (thumbnailRequest.status === 200) {
-                    thumbnailDestinationName = getRandomFileName();
-    
-                    createFileDirectory(thumbnailDestinationName);
-
-                    const thumbnailBytes = await thumbnailRequest.arrayBuffer();
-
-                    const thumbnailPath: string = path.join(uploadPath, thumbnailDestinationName, thumbnailDestinationName + ".jpg");
-
-                    fs.writeFileSync(thumbnailPath, Buffer.from(thumbnailBytes));
+        
+                if (youtubeVideo.status !== 200) {
+                    return res.status(404).json({
+                        message: "Failed to find youtube video with that id."
+                    });
                 }
+        
+                const videoData = (await youtubeVideo.json()).items[0].snippet;
+                const { title, thumbnails, channelTitle } = videoData;
+    
+                createFileDirectory(songDestinationName);
+    
+                if (thumbnails && Object.keys(thumbnails).length > 0) {
+                    const thumbnailUrl: { url: string, width: number, height: number } = (
+                        thumbnails.standard ||
+                        thumbnails.high ||
+                        thumbnails.medium ||
+                        thumbnails.default
+                    );
+    
+                    if (thumbnailUrl) {
+                        const thumbnailRequest = await fetch(
+                            thumbnailUrl.url
+                        );
+    
+                        if (thumbnailRequest.status === 200) {
+                            thumbnailDestinationName = getRandomFileName();
+            
+                            createFileDirectory(thumbnailDestinationName);
+        
+                            const thumbnailBytes: number[] = await thumbnailRequest.arrayBuffer();
+        
+                            const thumbnailPath: string = path.join(uploadPath, thumbnailDestinationName, thumbnailDestinationName + ".jpg");
+        
+                            fs.writeFileSync(thumbnailPath, Buffer.from(thumbnailBytes));
+                        }
+                    }
+                        
+                }
+
+                await youtubeDl(`https://www.youtube.com/watch?v=${ytVideoId}`, {
+                    extractAudio: true,
+                    yesPlaylist: true,
+                    audioFormat: "vorbis",
+                    retries: 0,
+                    ignoreErrors: true,
+                    maxDownloads: 1,
+                    maxFilesize: "25m",
+                    output: path.join(uploadPath, songDestinationName, `${songDestinationName}.ogg`),
+                    cookies: process.env.COOKIES_FILE,
+                    forceIpv4: true,
+                    verbose: true
+                });
+    
+                const createSongQuery = await Song.create({
+                    user_id: req.user.id,
+                    song_file_path: `/${songDestinationName}/${songDestinationName}.ogg`,
+                    song_title: title,
+                    song_author: channelTitle || null,
+                    song_thumbnail_path: thumbnailDestinationName ? `/${thumbnailDestinationName}/${thumbnailDestinationName}.jpg` : null
+                });
+    
+                return res.status(200).json(Object.keys(createSongQuery.get()).filter((key) => {
+                    return key !== "user_id"
+                }).reduce((prev: object, current: string) => {
+                    return {
+                        ...prev,
+                        [current]: createSongQuery[current]
+                    }
+                }, {}));
             }
-    
-            await youtubeDl(`https://www.youtube.com/watch?v=${ytVideoId}`, {
-                extractAudio: true,
-                yesPlaylist: true,
-                audioFormat: "vorbis",
-                retries: 0,
-                ignoreErrors: true,
-                maxDownloads: 1,
-                maxFilesize: "25m",
-                output: path.join(uploadPath, songDestinationName, `${songDestinationName}.ogg`),
-                cookies: process.env.COOKIES_FILE,
-                forceIpv4: true,
-                verbose: true
-            });
-
-            const createSongQuery = await Song.create({
-                user_id: req.user.id,
-                song_file_path: `/${songDestinationName}/${songDestinationName}.ogg`,
-                song_title: title,
-                song_author: channelTitle || null,
-                song_thumbnail_path: thumbnailDestinationName ? `/${thumbnailDestinationName}/${thumbnailDestinationName}.jpg` : null
-            });
-
-            return res.status(200).json(Object.keys(createSongQuery.get()).filter((key) => {
-                return key !== "user_id"
-            }).reduce((prev: object, current: string) => {
-                return {
-                    ...prev,
-                    [current]: createSongQuery[current]
-                }
-            }, {}));
         } catch (exc) {
             removeFileDirectories(
                 path.join(uploadPath, songDestinationName)

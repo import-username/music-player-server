@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "build": "concurrently -m 1 \"rm -r ./dist/server/*\" \"rm -r ./dist/ts/*\" \"tsc --build\"",
+    "build": "rm -r ./dist && tsc --build",
     "server": "concurrently \"nodemon ./dist/server/main.js\" \"tsc --watch\"",
     "dev": "tsnd ./src/server/main.ts"
   },
@@ -20,6 +20,7 @@
     "express": "^4.17.1",
     "fluent-ffmpeg": "^2.1.2",
     "jsonwebtoken": "^8.5.1",
+    "moment": "^2.29.1",
     "node-fetch": "^2.6.7",
     "p-queue": "^6.6.2",
     "pg": "^8.7.1",
