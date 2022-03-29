@@ -4,7 +4,6 @@ import * as path from "path";
 import * as fs from "fs";
 import uploadFile from "../middleware/uploadFile";
 import Song from "../tables/song";
-import Songs from "../tables/songs";
 import createGetSongsQueryOptions from "../middleware/createGetSongsQueryOptions";
 import { IRelationRequest } from "../../ts/interfaces/relation";
 import { ISongData, IUploadSongRequest } from "../../ts/interfaces/songs";
@@ -275,28 +274,32 @@ export default function songRoute(): express.Router {
         }
     });
 
-    router.get("/get-thumbnail/:id", auth, (req: IUploadSongRequest, res: express.Response) => {
+    router.get("/get-thumbnail/:id", auth, async (req: IUploadSongRequest, res: express.Response) => {
         if (req.params.id) {
-            Songs.findOne({
-                user_id: req.user.id,
-                song_thumbnail_path: `/${req.params.id.split(".")[0]}/${req.params.id}`
-            }, (err: Error, result: ISongData) => {
-                if (err) {
-                    return res.status(500).json({
-                        message: "Internal server error."
-                    });
-                }
+            try {
+                const songQuery = await Song.findOne({
+                    where: {
+                        user_id: req.user.id + "",
+                        song_thumbnail_path: `/${req.params.id.split(".")[0]}/${req.params.id}`
+                    }
+                });
 
-                if (!result) {
+                if (!songQuery) {
                     return res.status(401).json({
                         message: "Failed to find thumbnail with that id."
                     });
                 }
 
+                const result = songQuery.get();
+
                 const filePath: string = path.join(uploadPath, result.song_thumbnail_path);
 
                 return res.sendFile(filePath);
-            });
+            } catch (err: any) {
+                return res.status(500).json({
+                    message: "Internal server error."
+                });
+            }
         } else {
             return res.status(401).json({
                 message: "Failed to find thumbnail with that id."
@@ -304,7 +307,7 @@ export default function songRoute(): express.Router {
         }
     });
 
-    router.get("/:id", auth, (req: IAuthRequest, res: express.Response) => {
+    router.get("/:id", auth, async (req: IAuthRequest, res: express.Response) => {
         let range = req.headers.range;
 
         if (isNaN(parseInt(req.params.id))) {
@@ -313,18 +316,21 @@ export default function songRoute(): express.Router {
             });
         }
         
-        Songs.findOne({ user_id: req.user.id, id: req.params.id }, (err: Error, result: ISongData) => {
-            if (err) {
-                return res.status(500).json({
-                    message: "Internal server error."
-                });
-            }
+        try {
+            const songQuery = await Song.findOne({
+                where: {
+                    user_id: req.user.id + "",
+                    id: req.params.id + ""
+                }
+            });
 
-            if (!result) {
+            if (!songQuery) {
                 return res.status(401).json({
                     message: "Client is not authorized to access that file."
                 });
             }
+
+            const result = songQuery.get();
 
             const songPath = path.join(uploadPath, result.song_file_path);
             // TODO - add error handling here
@@ -348,7 +354,9 @@ export default function songRoute(): express.Router {
                     res.writeHead(206, headers);
             
                     return videoStream.pipe(res);
-                } catch (exc) {}
+                } catch (exc) {
+                    // TODO - maybe respond with 416 here
+                }
             }
             
             res.writeHead(200, {
@@ -358,7 +366,11 @@ export default function songRoute(): express.Router {
             const videoStream = fs.createReadStream(songPath);
     
             return videoStream.pipe(res);
-        });
+        } catch (err: any) {
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        }
     });
 
     router.patch("/add-to-playlist/:songId/:playlistId", auth, async (req: IAuthRequest, res) => {
