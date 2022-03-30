@@ -15,6 +15,7 @@ import fetch from "node-fetch";
 import { create as youtubeDlExec } from "youtube-dl-exec";
 import getRandomFileName from "../../helper/randomFileName";
 import createFileDirectory from "../../helper/createFileDirectory";
+import * as rangeParser from "range-parser";
 import * as moment from "moment";
 
 const router: express.Router = express.Router();
@@ -336,7 +337,7 @@ export default function songRoute(): express.Router {
 
     router.get("/:id", auth, async (req: IAuthRequest, res: express.Response) => {
         let range = req.headers.range;
-
+        
         if (isNaN(parseInt(req.params.id))) {
             return res.status(401).json({
                 message: "Invalid url parameter for id."
@@ -350,31 +351,37 @@ export default function songRoute(): express.Router {
                     id: req.params.id + ""
                 }
             });
-
+            
             if (!songQuery) {
+                console.log("doesnt exist")
                 return res.status(401).json({
                     message: "Client is not authorized to access that file."
                 });
             }
-
+            
             const result = songQuery.get();
-
+            
             const songPath = path.join(uploadPath, result.song_file_path);
-            // TODO - add error handling here
+
             const videoSize = fs.statSync(songPath).size;
+
+            let rangeHeader = rangeParser(videoSize, range + "")[0];
 
             if (range && !isNaN(parseInt(range.replace(/\D/g, "")))) {
                 try {
                     let startByte = Number(range.replace(/\D/g, ""));
-            
-                    const endByte = Math.min(startByte + (10 ** 6), videoSize - 1);
+
+                    let endByte: number = (
+                        (rangeHeader && rangeHeader.end)
+                        || videoSize - 1
+                    );
     
                     const videoStream = fs.createReadStream(songPath, { start: startByte, end: endByte });
 
                     const headers = {
                         "Content-Range": `bytes ${startByte}-${endByte}/${videoSize}`,
                         "Accept-Ranges": "bytes",
-                        "Content-Length":  videoSize,
+                        "Content-Length":  (endByte - startByte) + 1,
                         "Content-Type": "audio/ogg"
                     }
                     
