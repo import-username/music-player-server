@@ -6,7 +6,7 @@ import auth from "../middleware/auth";
 import uploadPlaylist from "../middleware/uploadPlaylist";
 import Playlist from "../tables/playlist";
 import Song from "../tables/song";
-import { Op } from "sequelize";
+import { Op, Order } from "sequelize";
 
 const router: Router = Router();
 
@@ -99,18 +99,27 @@ export default function playlistRoute(): Router {
     });
 
     router.get("/get-playlists", auth, (req: IAuthRequest, res) => {
+        const filter: { offset: number, limit: number, where: object, order: Order } = {
+            offset: parseInt((req.query.skip || req.query.offset) + "") || 0,
+            limit: parseInt(req.query.limit + "") || 100,
+            where: {
+                user_id: req.user.id + ""
+            },
+            order: [["updatedAt", "DESC"], ["id", "ASC"]]
+        };
+
+        if (req.query.titleIncludes) {
+            filter.where["playlist_title"] = {
+                [Op.iLike]: `%${req.query.titleIncludes}%`
+            }
+        }
+
         const offset: number = parseInt((req.query.skip || req.query.offset) + "") || 0;
 
         const limit: number = parseInt(req.query.limit + "") || 100;
 
         // TODO - add logic for search queries
-        Playlist.findAndCountAll({
-            where: {
-                user_id: req.user.id + ""
-            },
-            limit: limit,
-            offset: offset
-        }).then((playlistQuery) => {
+        Playlist.findAndCountAll(filter).then((playlistQuery) => {
             const playlists: Array<object> = playlistQuery.rows.map((playlist) => {
                 let playlistObj = {};
 
