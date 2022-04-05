@@ -17,6 +17,7 @@ import getRandomFileName from "../../helper/randomFileName";
 import createFileDirectory from "../../helper/createFileDirectory";
 import * as rangeParser from "range-parser";
 import * as moment from "moment";
+import removeProperties from "../../helper/removeProperties";
 
 const router: express.Router = express.Router();
 
@@ -353,11 +354,17 @@ export default function songRoute(): express.Router {
             });
             
             if (!songQuery) {
-                console.log("doesnt exist")
                 return res.status(401).json({
                     message: "Client is not authorized to access that file."
                 });
             }
+
+            Song.update({ last_played: Date.now() }, {
+                where: {
+                    user_id: req.user.id + "",
+                    id: req.params.id + ""
+                }
+            });
             
             const result = songQuery.get();
             
@@ -555,6 +562,38 @@ export default function songRoute(): express.Router {
         }
 
         return res.sendStatus(200);
+    });
+
+    router.get("/data/get-recently-played", auth, async (req: IAuthRequest, res) => {
+        try {
+            const songs = await Song.findAll({
+                where: {
+                    user_id: req.user.id + "",
+                    last_played: {
+                        [Op.not]: null
+                    }
+                },
+                limit: 10,
+                order: [["last_played", "DESC"], ["id", "ASC"]]
+            });
+
+            if (!songs) {
+                return res.status(404).json({
+                    message: "No songs found."
+                });
+            }
+
+            return res.status(200).json({
+                rows: removeProperties(songs.map((song) => {
+                    return song.get();
+                }), "user_id", "song_file_path")
+            });
+        } catch (err: any) {
+            console.log(err)
+            return res.status(500).json({
+                message: "Internal server error."
+            });
+        }
     });
 
     return router;

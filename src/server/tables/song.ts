@@ -39,12 +39,17 @@ const Song = sequelize.define("Song", {
         type: DataTypes.ARRAY(DataTypes.STRING),
         defaultValue: []
     },
+    last_played: {
+        type: DataTypes.DATE,
+        defaultValue: null,
+        allowNull: true
+    }
 }, {
     tableName: "songs",
     timestamps: true,
     underscored: true
 });
 
-Song.sync();
+Song.sync({ alter: true });
 
 export default Song;
